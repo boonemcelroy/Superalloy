@@ -15,7 +15,7 @@
 	name = Superalloy
 	category = Audio Module Class
 	subCategories = Fx|Mastering
-	version = 6.1.0
+	version = 6.2.0
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF019182FAEB5776727953616C6F
 
@@ -23,7 +23,7 @@
 	name = Superalloy
 	category = Component Controller Class
 	subCategories = Fx|Mastering
-	version = 6.1.0
+	version = 6.2.0
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF011234ABCD5776727953616C6F
 
@@ -59,9 +59,10 @@ Info:  => Event Buses: [0 In(s) => 0 Out(s)]
 
 [Scan Parameters]
 Info:  ===Scan Parameters ====================================
-Info:  This component exports 2 parameter(s)
+Info:  This component exports 3 parameter(s)
 Info:     Parameter 000 (id=103787271): [title="Metal"] [unit=""] [type = Discrete, default = 0.142857, unit = 0]
-Info:     Parameter 001 (id=1652125811): [title="Bypass"] [unit=""] [type = Toggle, default = 0.000000, unit = 0]
+Info:     Parameter 001 (id=951540442): [title="Contour"] [unit=""] [type = Toggle, default = 0.000000, unit = 0]
+Info:     Parameter 002 (id=1652125811): [title="Bypass"] [unit=""] [type = Toggle, default = 0.000000, unit = 0]
 [Succeeded]
 
 [MIDI Mapping]

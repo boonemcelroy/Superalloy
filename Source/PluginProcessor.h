@@ -47,6 +47,7 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
     static juce::StringArray metalNames();
+    static juce::StringArray contourNames();
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
@@ -56,6 +57,7 @@ private:
     void processSamples (juce::AudioBuffer<Sample>& buffer);
 
     std::atomic<float>* metalParam = nullptr;
+    std::atomic<float>* contourParam = nullptr;
     std::shared_ptr<const superalloy::MetalBank> bank;
     std::vector<superalloy::Channel630> channels;
 

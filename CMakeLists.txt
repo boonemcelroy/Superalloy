@@ -6,7 +6,7 @@
 #  fetches JUCE 9.0.6 from GitHub.
 # ==============================================================================
 cmake_minimum_required (VERSION 3.22)
-project (Superalloy VERSION 6.1.0 LANGUAGES C CXX)
+project (Superalloy VERSION 6.2.0 LANGUAGES C CXX)
 
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,7 +44,7 @@ juce_add_plugin (Superalloy
     PLUGIN_MANUFACTURER_CODE   Wvry
     PLUGIN_CODE                Salo
     PRODUCT_NAME               "Superalloy"
-    VERSION                    6.1.0
+    VERSION                    6.2.0
     FORMATS                    ${WAVRELY_FORMATS}
     IS_SYNTH                   FALSE
     NEEDS_MIDI_INPUT           FALSE

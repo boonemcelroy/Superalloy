@@ -102,23 +102,23 @@ G. BROADBAND PROGRAMME LEVEL: pink noise 20 Hz-20 kHz (2nd-order), 6 s, fs 352.8
   Silver — Ohno Continuous Cast 7N             -0.00011 dB re input
   Copper — Grade 1 6N OFC                      -0.00010 dB re input
   Gold — pure                                  -0.00008 dB re input
-  Rhodium                                        -0.00004 dB re input
-  Iridium                                        -0.00004 dB re input
-  Platinum-Iridium 10 (kilogram-prototype alloy) -0.00018 dB re input
-  Monel 400                                      -0.00081 dB re input
-  Haynes 188                                     -0.00269 dB re input
-  MP35N                                          -0.00278 dB re input
-  Waspaloy                                       -0.00375 dB re input
-  Inconel 718                                    -0.00386 dB re input
-  Hastelloy C-276                                -0.00397 dB re input
-  Inconel 625                                    -0.00413 dB re input
-  René 41                                       -0.00413 dB re input
-  [PASS] Programme level (R1) worst |metal - copper| = 0.00403 dB (limit 0.01)
-  [PASS] Superconductor = pristine environment null residual -204.3 dB re signal (limit -120)
+  Rhodium                                        -0.00005 dB re input
+  Iridium                                        -0.00005 dB re input
+  Platinum-Iridium 10 (kilogram-prototype alloy) -0.00037 dB re input
+  Monel 400                                      -0.00153 dB re input
+  Haynes 188                                     -0.00487 dB re input
+  MP35N                                          -0.00504 dB re input
+  Waspaloy                                       -0.00673 dB re input
+  Inconel 718                                    -0.00692 dB re input
+  Hastelloy C-276                                -0.00710 dB re input
+  Inconel 625                                    -0.00739 dB re input
+  René 41                                       -0.00739 dB re input
+  [PASS] Programme level (R1) worst |metal - copper| = 0.00729 dB (limit 0.01)
+  [PASS] Superconductor = pristine environment null residual -201.9 dB re signal (limit -120)
 
 H. SEAMLESS SWITCH: Copper -> Rene 41 at t = 1 s on pink noise (40 ms equal-gain fade)
-  [PASS] Converges to a continuously running Rene 41 after fade 0-250 ms: -93.3 dB, 250 ms-3 s: -137.3 dB re signal (limit -60 / -90)
-  [PASS] No click max sample step in switch window 0.04993 vs programme max 0.06644
+  [PASS] Converges to a continuously running Rene 41 after fade 0-250 ms: -97.1 dB, 250 ms-3 s: -139.8 dB re signal (limit -60 / -90)
+  [PASS] No click max sample step in switch window 0.04649 vs programme max 0.06075
 
 I. ALIASING / HF PURITY at 44.1 kHz (Rene 41, 0 dBFS)
   [PASS] HF purity 10000 Hz: THD+N (incl. aliases) 3.40e-06 % (limit 1e-4 %)
@@ -132,8 +132,67 @@ J. SILENCE, IMPULSE, LATENCY, STABILITY
   [PASS] Zero latency, no ringing René 41: peak at sample 0, value 0.999787, max 2nd-difference of tail n>=64 5.56e-11 (limit 1e-9)
   [PASS] 60 s hot programme stable max Newton iterations 3
 
+L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01 dB on pink noise, no added distortion)
+  metal                                            fit 44.1k  fit 352.8k     20 Hz     1 kHz     5 kHz    20 kHz   gain dB
+  Superconductor (NbTi, 0 Ω reference)             0.00e+00    0.00e+00    +0.000    +0.000    +0.000    +0.000   +0.0000
+  Silver — Ohno Continuous Cast 7N                2.78e-04    2.70e-04    +0.095    +0.070    -0.131    -0.367   +0.0949
+  Copper — Grade 1 6N OFC                         2.58e-04    3.04e-04    +0.096    +0.072    -0.133    -0.379   +0.0964
+  Gold — pure                                     1.77e-04    3.22e-04    +0.103    +0.084    -0.135    -0.444   +0.1032
+  Rhodium                                           7.44e-05    2.17e-05    +0.111    +0.103    -0.088    -0.660   +0.1131
+  Iridium                                           6.43e-05    1.64e-05    +0.111    +0.104    -0.074    -0.707   +0.1134
+  Platinum-Iridium 10 (kilogram-prototype alloy)    4.79e-05    6.06e-06    +0.024    +0.075    +0.020    -0.674   +0.0771
+  Monel 400                                         3.15e-05    2.46e-06    -0.144    +0.069    +0.037    -0.424   +0.0706
+  Haynes 188                                        2.11e-05    1.30e-06    -0.561    +0.097    +0.076    -0.235   +0.0977
+  MP35N                                             2.09e-05    1.28e-06    -0.581    +0.098    +0.078    -0.229   +0.0993
+  Waspaloy                                          1.87e-05    1.11e-06    -0.778    +0.114    +0.096    -0.179   +0.1147
+  Inconel 718                                       1.85e-05    1.08e-06    -0.800    +0.115    +0.098    -0.174   +0.1164
+  Hastelloy C-276                                   1.83e-05    1.08e-06    -0.821    +0.117    +0.099    -0.169   +0.1181
+  Inconel 625                                       1.80e-05    1.05e-06    -0.854    +0.120    +0.102    -0.162   +0.1206
+  René 41                                          1.80e-05    1.05e-06    -0.854    +0.120    +0.102    -0.162   +0.1206
+  [PASS] Color contour realisation worst |realised - design| 20 Hz-20 kHz, 44.1 + 352.8 kHz: 0.00042 dB (limit 0.002)
+  [PASS] Color contour physics LF x HF factorisation vs exact Color/Subtle network ratio: 0.00555 dB (limit 0.01)
+  [PASS] Color cap (+/-1 dB vs flat) worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: 0.861 dB (limit 1.0)
+  [PASS] Color cap (any two metals) worst difference between any two metals 20 Hz-20 kHz: 0.967 dB at 20 Hz (limit 1.0)
+  [PASS] Color measured response engine vs analytic, 5 metals x 5 frequencies, -40 dBFS: 0.00055 dB (limit 0.005)
+    Color Superconductor (NbTi, 0 Ω reference)    +0.00010 dB re Subtle copper
+    Color Silver — Ohno Continuous Cast 7N       +0.00271 dB re Subtle copper
+    Color Copper — Grade 1 6N OFC                +0.00275 dB re Subtle copper
+    Color Gold — pure                            +0.00291 dB re Subtle copper
+    Color Rhodium                                  +0.00316 dB re Subtle copper
+    Color Iridium                                  +0.00317 dB re Subtle copper
+    Color Platinum-Iridium 10 (kilogram-prototype alloy) +0.00206 dB re Subtle copper
+    Color Monel 400                                +0.00139 dB re Subtle copper
+    Color Haynes 188                               +0.00054 dB re Subtle copper
+    Color MP35N                                    +0.00050 dB re Subtle copper
+    Color Waspaloy                                 +0.00005 dB re Subtle copper
+    Color Inconel 718                              -0.00000 dB re Subtle copper
+    Color Hastelloy C-276                          -0.00005 dB re Subtle copper
+    Color Inconel 625                              -0.00013 dB re Subtle copper
+    Color René 41                                 -0.00013 dB re Subtle copper
+  [PASS] Color programme level worst |Color metal - Subtle copper| = 0.00317 dB (limit 0.01)
+    Copper — Grade 1 6N OFC                   20 Hz 0 dBFS: THD Subtle 0.0112 %  Color 0.0112 %  (+0.00 dB)
+    Copper — Grade 1 6N OFC                  100 Hz 0 dBFS: THD Subtle 0.0007 %  Color 0.0007 %  (-0.00 dB)
+    Inconel 718                                 20 Hz 0 dBFS: THD Subtle 0.6716 %  Color 0.7322 %  (+0.75 dB)
+    Inconel 718                                100 Hz 0 dBFS: THD Subtle 0.0424 %  Color 0.0425 %  (+0.03 dB)
+    René 41                                    20 Hz 0 dBFS: THD Subtle 0.6935 %  Color 0.7601 %  (+0.80 dB)
+    René 41                                   100 Hz 0 dBFS: THD Subtle 0.0437 %  Color 0.0438 %  (+0.04 dB)
+  [PASS] Color adds no distortion worst Color - Subtle THD = +0.80 dB (limit +1.0; only the linear contour's tilt between H1 and H3 acts)
+  [PASS] Subtle -> Color converges exactly Rene 41: after fade -3029.5 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS] No click (Subtle -> Color) max sample step in switch window 0.04488 vs programme max 0.05908
+  [PASS] Color metal change converges Copper -> Rene 41 in Color: 0-250 ms -67.3 dB, 250 ms-3 s -118.4 dB re signal (limit -60 / -90)
+  [PASS] No click (metal change in Color) max sample step in switch window 0.04415 vs programme max 0.05908
+  [PASS] Color: digital silence in -> exact zero out 
+  [PASS] Color: zero latency, no ringing 44.1 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 2.58e-25 (limit 1e-3, or alternating energy 3.1e-32 < 1e-24)
+  [PASS] Color: zero latency, no ringing 44.1 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 1.53e-20 (limit 1e-3, or alternating energy 2.3e-25 < 1e-24)
+  [PASS] Color: zero latency, no ringing 44.1 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 6.41e-19 (limit 1e-3, or alternating energy 2.5e-23 < 1e-24)
+  [PASS] Color: zero latency, no ringing 44.1 kHz René 41: peak at sample 0, tail alternating/smooth energy 2.72e-13 (limit 1e-3, or alternating energy 2.2e-16 < 1e-24)
+  [PASS] Color: zero latency, no ringing 352.8 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 6.29e-29 (limit 1e-3, or alternating energy 1.3e-37 < 1e-24)
+  [PASS] Color: zero latency, no ringing 352.8 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 2.63e-08 (limit 1e-3, or alternating energy 1.7e-14 < 1e-24)
+  [PASS] Color: zero latency, no ringing 352.8 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 4.26e-11 (limit 1e-3, or alternating energy 1.3e-16 < 1e-24)
+  [PASS] Color: zero latency, no ringing 352.8 kHz René 41: peak at sample 0, tail alternating/smooth energy 6.58e-17 (limit 1e-3, or alternating energy 7.9e-21 < 1e-24)
+
 K. CPU (single core, this machine)
-  fs 44.1 kHz: 284.1 ns/sample/channel, stereo uses 2.5 % of one core (x2 during a fade)
-  fs 352.8 kHz: 236.3 ns/sample/channel, stereo uses 16.7 % of one core (x2 during a fade)
+  fs 44.1 kHz: 409.4 ns/sample/channel, stereo uses 3.6 % of one core (x2 during a fade)
+  fs 352.8 kHz: 288.2 ns/sample/channel, stereo uses 20.3 % of one core (x2 during a fade)
 
 RESULT: ALL TESTS PASSED (0 failures)

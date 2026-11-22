@@ -6,10 +6,21 @@
 #include "PluginEditor.h"
 #include "InconelTexture.h"
 
+namespace
+{
+    const juce::Colour kPanel        (0xb0121418);
+    const juce::Colour kPanelEdge    (0x60ffffff);
+    const juce::Colour kEngraving    (0xd0101114);
+    const juce::Colour kTextBright   (0xfff4efe6);
+    const juce::Colour kTextDim      (0xffb9b0a2);
+    const juce::Colour kTemperLight  (0xff8a6a3c);   // straw-bronze heat tint
+    const juce::Colour kTemperDark   (0xff5a3f6e);   // violet heat tint
+}
+
 //==============================================================================
 SuperalloyLookAndFeel::SuperalloyLookAndFeel()
 {
-    setColour (juce::ComboBox::textColourId,              juce::Colour (0xfff4efe6));
+    setColour (juce::ComboBox::textColourId,              kTextBright);
     setColour (juce::ComboBox::arrowColourId,             juce::Colour (0xffe8dcc4));
     setColour (juce::PopupMenu::backgroundColourId,       juce::Colour (0xf01b1d22));
     setColour (juce::PopupMenu::textColourId,             juce::Colour (0xffe9e4da));
@@ -21,9 +32,9 @@ void SuperalloyLookAndFeel::drawComboBox (juce::Graphics& g, int width, int heig
                                           int, int, int, int, juce::ComboBox& box)
 {
     const auto r = juce::Rectangle<float> (0.0f, 0.0f, (float) width, (float) height).reduced (0.5f);
-    g.setColour (juce::Colour (0xb0121418));
+    g.setColour (kPanel);
     g.fillRoundedRectangle (r, 6.0f);
-    g.setColour (juce::Colour (0x60ffffff));
+    g.setColour (kPanelEdge);
     g.drawRoundedRectangle (r, 6.0f, 1.0f);
 
     // arrow
@@ -52,8 +63,76 @@ juce::Font SuperalloyLookAndFeel::getPopupMenuFont()
 }
 
 //==============================================================================
+ContourSwitch::ContourSwitch (juce::RangedAudioParameter& param)
+    : attachment (param, [this] (float v) { current = juce::jlimit (0, 1, (int) std::lround (v)); repaint(); })
+{
+    setTitle ("Contour");
+    setDescription ("Subtle or Color");
+    setWantsKeyboardFocus (true);
+    setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    attachment.sendInitialUpdate();
+}
+
+void ContourSwitch::select (int index)
+{
+    index = juce::jlimit (0, 1, index);
+    if (index != current)
+        attachment.setValueAsCompleteGesture ((float) index);
+}
+
+void ContourSwitch::mouseUp (const juce::MouseEvent& e)
+{
+    if (getLocalBounds().contains (e.getPosition()))
+        select (e.x < getWidth() / 2 ? 0 : 1);
+}
+
+bool ContourSwitch::keyPressed (const juce::KeyPress& k)
+{
+    if (k == juce::KeyPress::leftKey)  { select (0); return true; }
+    if (k == juce::KeyPress::rightKey) { select (1); return true; }
+    if (k == juce::KeyPress::spaceKey || k == juce::KeyPress::returnKey) { select (1 - current); return true; }
+    return false;
+}
+
+void ContourSwitch::paint (juce::Graphics& g)
+{
+    const auto r = getLocalBounds().toFloat().reduced (0.5f);
+    const float radius = r.getHeight() * 0.5f;
+
+    g.setColour (kPanel);
+    g.fillRoundedRectangle (r, radius);
+
+    // selected segment: a heat-tinted inlay
+    auto seg = r.reduced (3.0f);
+    seg = current == 0 ? seg.removeFromLeft (seg.getWidth() * 0.5f) : seg.removeFromRight (seg.getWidth() * 0.5f);
+    juce::ColourGradient grad (kTemperLight.withAlpha (0.92f), seg.getX(), seg.getY(),
+                               kTemperDark.withAlpha (0.92f), seg.getRight(), seg.getBottom(), false);
+    g.setGradientFill (grad);
+    g.fillRoundedRectangle (seg, seg.getHeight() * 0.5f);
+    g.setColour (juce::Colour (0x40ffffff));
+    g.drawRoundedRectangle (seg.reduced (0.5f), seg.getHeight() * 0.5f, 1.0f);
+
+    g.setColour (kPanelEdge);
+    g.drawRoundedRectangle (r, radius, 1.0f);
+    if (hasKeyboardFocus (false))
+    {
+        g.setColour (juce::Colour (0x80e8dcc4));
+        g.drawRoundedRectangle (r.expanded (2.0f), radius + 2.0f, 1.0f);
+    }
+
+    g.setFont (juce::Font (juce::FontOptions (13.0f)).withExtraKerningFactor (0.22f));
+    const auto left = getLocalBounds().removeFromLeft (getWidth() / 2);
+    const auto right = getLocalBounds().removeFromRight (getWidth() - getWidth() / 2);
+    g.setColour (current == 0 ? kTextBright : kTextDim);
+    g.drawText ("SUBTLE", left, juce::Justification::centred);
+    g.setColour (current == 1 ? kTextBright : kTextDim);
+    g.drawText ("COLOR", right, juce::Justification::centred);
+}
+
+//==============================================================================
 SuperalloyAudioProcessorEditor::SuperalloyAudioProcessorEditor (SuperalloyAudioProcessor& p)
-    : AudioProcessorEditor (&p), processor630 (p)
+    : AudioProcessorEditor (&p), processorRef (p),
+      contour (*p.apvts.getParameter ("contour"))
 {
     setLookAndFeel (&lnf);
     background = superalloy::texture::renderHeatTintedInconel (kWidth, kHeight);
@@ -61,7 +140,9 @@ SuperalloyAudioProcessorEditor::SuperalloyAudioProcessorEditor (SuperalloyAudioP
     metalBox.addItemList (SuperalloyAudioProcessor::metalNames(), 1);
     metalBox.setTooltip ("Metal");
     addAndMakeVisible (metalBox);
-    attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (processor630.apvts, "metal", metalBox);
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (processorRef.apvts, "metal", metalBox);
+
+    addAndMakeVisible (contour);
 
     setResizable (false, false);
     setSize (kWidth, kHeight);
@@ -77,11 +158,13 @@ void SuperalloyAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.drawImageAt (background, 0, 0);
 
-    // dropdown title: "Metal"
-    const auto box = metalBox.getBounds();
+    // engraved titles
     g.setFont (juce::Font (juce::FontOptions (13.0f)).withExtraKerningFactor (0.25f));
-    g.setColour (juce::Colour (0xd0101114));
+    g.setColour (kEngraving);
+    const auto box = metalBox.getBounds();
     g.drawText ("METAL", box.getX(), box.getY() - 22, box.getWidth(), 18, juce::Justification::centredLeft);
+    const auto sw = contour.getBounds();
+    g.drawText ("CONTOUR", sw.getX(), sw.getY() - 22, sw.getWidth(), 18, juce::Justification::centredLeft);
 
     // machined edge
     g.setColour (juce::Colour (0x40000000));
@@ -90,5 +173,8 @@ void SuperalloyAudioProcessorEditor::paint (juce::Graphics& g)
 
 void SuperalloyAudioProcessorEditor::resized()
 {
-    metalBox.setBounds (getLocalBounds().withSizeKeepingCentre (380, 38).translated (0, 10));
+    metalBox.setBounds (getLocalBounds().withSizeKeepingCentre (380, 38).translated (0, -22));
+    contour.setBounds (juce::Rectangle<int> (0, 0, 240, 32)
+                           .withX (metalBox.getX())
+                           .withY (metalBox.getBottom() + 44));
 }

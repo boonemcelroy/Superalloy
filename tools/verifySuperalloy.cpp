@@ -2,7 +2,8 @@
   ==============================================================================
     Superalloy — verifySuperalloy.cpp
     Stand-alone verification harness. Uses the exact plugin DSP sources
-    (TransformerEngine + Channel630), no JUCE. Every owner ruling is tested.
+    (TransformerEngine + Channel630 + ColorContour), no JUCE. Every owner ruling is tested.
+    Sections A-K: Contour = Subtle (the rev 6.1 sound). Section L: Contour = Color.
 
     Usage:  verifySuperalloy              run all tests, write report to stdout
             verifySuperalloy --calibrate  solve the core shape constant u_r so the
@@ -141,21 +142,58 @@ static double copperTHD20 (double fs)
     return thdOf (r.out, 20.0, fs);
 }
 
-// Paul Kellet's refined pink filter on Gaussian white noise, normalised.
-static std::vector<double> pinkNoise (size_t N, double rmsDBFS, unsigned seed)
+// Exact pink noise at any sample rate: Gaussian white noise shaped by 1/sqrt(f)
+// in the frequency domain (power per octave constant from 1 Hz to Nyquist),
+// circular (seamless), normalised to the requested RMS. Earlier revisions used
+// Paul Kellet's IIR pink filter, whose coefficients are only pink at 44.1 kHz
+// (at 352.8 kHz it is flat below ~75 Hz); this generator is exact everywhere.
+static void fftInPlace (std::vector<cd>& a, bool inverse)
 {
+    const size_t n = a.size();
+    for (size_t i = 1, j = 0; i < n; ++i)
+    {
+        size_t bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) std::swap (a[i], a[j]);
+    }
+    for (size_t len = 2; len <= n; len <<= 1)
+    {
+        const double ang = 2.0 * design::kPi / (double) len * (inverse ? 1.0 : -1.0);
+        const cd wl (std::cos (ang), std::sin (ang));
+        for (size_t i = 0; i < n; i += len)
+        {
+            cd w (1.0, 0.0);
+            for (size_t k = 0; k < len / 2; ++k)
+            {
+                const cd u = a[i + k], v = a[i + k + len / 2] * w;
+                a[i + k] = u + v; a[i + k + len / 2] = u - v;
+                w *= wl;
+            }
+        }
+    }
+    if (inverse) for (auto& x : a) x /= (double) n;
+}
+
+static std::vector<double> pinkNoise (size_t N, double rmsDBFS, unsigned seed, double fs = 352800.0)
+{
+    size_t n2 = 1; while (n2 < N) n2 <<= 1;
     std::mt19937_64 rng (seed);
     std::normal_distribution<double> g (0.0, 1.0);
-    std::vector<double> p (N);
-    double b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (size_t n = 0; n < N; ++n)
+    std::vector<cd> a (n2);
+    for (auto& x : a) x = cd (g (rng), 0.0);
+    fftInPlace (a, false);
+    for (size_t k = 0; k <= n2 / 2; ++k)
     {
-        const double w = g (rng);
-        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
-        b2 = 0.96900 * b2 + w * 0.1538520; b3 = 0.86650 * b3 + w * 0.3104856;
-        b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980;
-        p[n] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362; b6 = w * 0.115926;
+        const double f = (double) k * fs / (double) n2;
+        const double gain = f >= 1.0 ? 1.0 / std::sqrt (f) : 0.0;
+        a[k] *= gain;
+        if (k > 0 && k < n2 / 2) a[n2 - k] = std::conj (a[k]);
     }
+    a[n2 / 2] = cd (a[n2 / 2].real(), 0.0);
+    fftInPlace (a, true);
+    std::vector<double> p (N);
+    for (size_t i = 0; i < N; ++i) p[i] = a[i].real();
     double s = 0; for (double v : p) s += v * v;
     const double k = std::pow (10.0, rmsDBFS / 20.0) / std::sqrt (s / (double) N);
     for (double& v : p) v *= k;
@@ -508,7 +546,7 @@ int main (int argc, char** argv)
 
         // 60 s of hot pink noise at 44.1 kHz through the most resistive metal
         Channel630 c; c.prepare (bankFor (FS_LO), 14);
-        const auto pn = pinkNoise ((size_t) (60 * FS_LO), -6.0, 7);
+        const auto pn = pinkNoise ((size_t) (60 * FS_LO), -6.0, 7, FS_LO);
         bool finite = true; int maxIt = 0;
         for (double x : pn) { const double y = c.process (x); finite &= std::isfinite (y); maxIt = std::max (maxIt, c.getActiveEngine().getLastIterations()); }
         char b[96]; std::snprintf (b, sizeof b, "max Newton iterations %d", maxIt);
@@ -517,11 +555,212 @@ int main (int argc, char** argv)
     std::printf ("\n");
 
     //--------------------------------------------------------------------------
+    std::printf ("L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01 dB on pink noise, no added distortion)\n");
+    {
+        // L1. Design table + realisation accuracy
+        std::printf ("  %-46s %11s %11s %9s %9s %9s %9s %9s\n", "metal", "fit 44.1k", "fit 352.8k", "20 Hz", "1 kHz", "5 kHz", "20 kHz", "gain dB");
+        double worstCap = 0, worstReal = 0, worstSep = 0;
+        for (double fs : { FS_LO, FS_HI })
+        {
+            const auto& b = bankFor (fs);
+            for (int m = 0; m < kNumMetals; ++m)
+            {
+                const auto p = colorDesign::subtlePoles (m);
+                for (int i = 0; i <= 600; ++i)
+                {
+                    const double f = 20.0 * std::pow (1000.0, i / 600.0);
+                    const double tot = dB (b.subtleMagnitude (m, f) * b.color[(size_t) m].magnitudeAt (f, fs) * b.color[(size_t) m].gain);
+                    worstCap = std::max (worstCap, std::abs (tot));
+                    const cd s (0.0, 2.0 * design::kPi * design::warpedHz (f, fs));
+                    const double lf = std::abs ((s + p[0]) / (s + colorDesign::kCoreFactor * p[0]) * (s + p[1]) / (s + colorDesign::kCoreFactor * p[1]));
+                    worstReal = std::max (worstReal, std::abs (dB (b.color[(size_t) m].magnitudeAt (f, fs)) - (dB (lf) + colorDesign::hfTargetDB (m, f))));
+                    if (fs == FS_HI)
+                    {
+                        const cd sa (0.0, 2.0 * design::kPi * f);
+                        const double lfa = std::abs ((sa + p[0]) / (sa + colorDesign::kCoreFactor * p[0]) * (sa + p[1]) / (sa + colorDesign::kCoreFactor * p[1]));
+                        worstSep = std::max (worstSep, std::abs (dB (lfa) + colorDesign::hfTargetDB (m, f) - dB (std::abs (colorDesign::exactRatio (m, f)))));
+                    }
+                }
+            }
+        }
+        for (int m : metals)
+        {
+            const auto& b = bankFor (FS_HI);
+            auto at = [&] (double f) { return dB (b.subtleMagnitude (m, f) * b.color[(size_t) m].magnitudeAt (f, FS_HI) * b.color[(size_t) m].gain); };
+            std::printf ("  %-46s %11.2e %11.2e %+9.3f %+9.3f %+9.3f %+9.3f %+9.4f\n", kMetals[(size_t) m].menuName,
+                         bankFor (FS_LO).color[(size_t) m].fitErrorDB, b.color[(size_t) m].fitErrorDB,
+                         at (20.0), at (1000.0), at (5000.0), at (20000.0), dB (b.color[(size_t) m].gain));
+        }
+        char b1[128];
+        std::snprintf (b1, sizeof b1, "worst |realised - design| 20 Hz-20 kHz, 44.1 + 352.8 kHz: %.5f dB (limit 0.002)", worstReal);
+        check (worstReal <= 0.002, "Color contour realisation", b1);
+        std::snprintf (b1, sizeof b1, "LF x HF factorisation vs exact Color/Subtle network ratio: %.5f dB (limit 0.01)", worstSep);
+        check (worstSep <= 0.01, "Color contour physics", b1);
+        std::snprintf (b1, sizeof b1, "worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: %.3f dB (limit 1.0)", worstCap);
+        check (worstCap <= 1.0, "Color cap (+/-1 dB vs flat)", b1);
+        {
+            double spread = 0, at = 0;
+            for (double fs : { FS_LO, FS_HI })
+            {
+                const auto& b = bankFor (fs);
+                for (int i = 0; i <= 600; ++i)
+                {
+                    const double f = 20.0 * std::pow (1000.0, i / 600.0);
+                    double mx = -1e9, mn = 1e9;
+                    for (int m = 0; m < kNumMetals; ++m)
+                    {
+                        const double v = dB (b.subtleMagnitude (m, f) * b.color[(size_t) m].magnitudeAt (f, fs) * b.color[(size_t) m].gain);
+                        mx = std::max (mx, v); mn = std::min (mn, v);
+                    }
+                    if (mx - mn > spread) { spread = mx - mn; at = f; }
+                }
+            }
+            std::snprintf (b1, sizeof b1, "worst difference between any two metals 20 Hz-20 kHz: %.3f dB at %.0f Hz (limit 1.0)", spread, at);
+            check (spread <= 1.0, "Color cap (any two metals)", b1);
+        }
+
+        // L2. Measured through the real engine at -40 dBFS (small signal) vs analytic
+        {
+            double worst = 0;
+            for (int m : { 2, 4, 7, 11, 14 })
+                for (double f : { 20.0, 100.0, 1000.0, 5000.0, 20000.0 })
+                {
+                    Channel630 ch; ch.prepare (bankFor (FS_HI), m, true);
+                    auto r = runSine (ch, FS_HI, f, -40.0, 2.0, 0.5, 40.0);
+                    const double meas = dB (std::abs (windowedBin (r.out, f, FS_HI)) / std::abs (windowedBin (r.in, f, FS_HI)));
+                    const auto& b = bankFor (FS_HI);
+                    const double ana = dB (b.subtleMagnitude (m, f) * b.color[(size_t) m].magnitudeAt (f, FS_HI) * b.color[(size_t) m].gain);
+                    worst = std::max (worst, std::abs (meas - ana));
+                }
+            std::snprintf (b1, sizeof b1, "engine vs analytic, 5 metals x 5 frequencies, -40 dBFS: %.5f dB (limit 0.005)", worst);
+            check (worst <= 0.005, "Color measured response", b1);
+        }
+
+        // L3. Programme level on pink noise
+        {
+            const size_t N = (size_t) (8.0 * FS_HI), skip = (size_t) (2.0 * FS_HI);
+            auto pn = pinkNoise (N, -18.0, 630);
+            bandLimit (pn, FS_HI);
+            Channel630 cu; cu.prepare (bankFor (FS_HI), 2, false);
+            std::vector<double> o (N);
+            for (size_t i = 0; i < N; ++i) o[i] = cu.process (pn[i]);
+            const double ref = rmsOf (o, skip);
+            double worst = 0;
+            for (int m : metals)
+            {
+                Channel630 ch; ch.prepare (bankFor (FS_HI), m, true);
+                for (size_t i = 0; i < N; ++i) o[i] = ch.process (pn[i]);
+                const double d = dB (rmsOf (o, skip) / ref);
+                std::printf ("    Color %-40s %+.5f dB re Subtle copper\n", kMetals[(size_t) m].menuName, d);
+                worst = std::max (worst, std::abs (d));
+            }
+            std::snprintf (b1, sizeof b1, "worst |Color metal - Subtle copper| = %.5f dB (limit 0.01)", worst);
+            check (worst <= 0.01, "Color programme level", b1);
+        }
+
+        // L4. No added distortion
+        {
+            double worst = -100;
+            for (int m : { 2, 11, 14 })
+                for (double f : { 20.0, 100.0 })
+                {
+                    Channel630 a; a.prepare (bankFor (FS_HI), m, false);
+                    Channel630 c; c.prepare (bankFor (FS_HI), m, true);
+                    const double ts = thdOf (runSine (a, FS_HI, f, 0.0, 2.0, 2.0, 40.0).out, f, FS_HI);
+                    const double tc = thdOf (runSine (c, FS_HI, f, 0.0, 2.0, 2.0, 40.0).out, f, FS_HI);
+                    std::printf ("    %-40s %5.0f Hz 0 dBFS: THD Subtle %.4f %%  Color %.4f %%  (%+.2f dB)\n",
+                                 kMetals[(size_t) m].menuName, f, ts * 100, tc * 100, dB (tc / ts));
+                    worst = std::max (worst, dB (tc / ts));
+                }
+            std::snprintf (b1, sizeof b1, "worst Color - Subtle THD = %+.2f dB (limit +1.0; only the linear contour's tilt between H1 and H3 acts)", worst);
+            check (worst <= 1.0, "Color adds no distortion", b1);
+        }
+
+        // L5. Seamless Subtle -> Color, and metal change inside Color
+        {
+            const double fs = FS_HI;
+            const size_t N = (size_t) (4.0 * fs), sw = (size_t) fs, fade = (size_t) std::lround (0.040 * fs);
+            auto pn = pinkNoise (N, -18.0, 41);
+            bandLimit (pn, fs);
+            for (int test = 0; test < 2; ++test)
+            {
+                Channel630 a, ref;
+                if (test == 0) { a.prepare (bankFor (fs), 14, false); ref.prepare (bankFor (fs), 14, true); }
+                else           { a.prepare (bankFor (fs), 2, true);   ref.prepare (bankFor (fs), 14, true); }
+                std::vector<double> oa (N), oref (N);
+                double maxStep = 0, maxStepRef = 0;
+                for (size_t i = 0; i < N; ++i)
+                {
+                    if (i == sw) { if (test == 0) a.selectColor (true); else a.selectMetal (14); }
+                    oa[i] = a.process (pn[i]);
+                    oref[i] = ref.process (pn[i]);
+                    if (i > 0)
+                    {
+                        maxStepRef = std::max (maxStepRef, std::abs (oref[i] - oref[i - 1]));
+                        if (i >= sw - 10 && i <= sw + fade + 10) maxStep = std::max (maxStep, std::abs (oa[i] - oa[i - 1]));
+                    }
+                }
+                auto resid = [&] (size_t from, size_t to)
+                {
+                    double e = 0, s2 = 0;
+                    for (size_t i = from; i < to; ++i) { e += (oa[i] - oref[i]) * (oa[i] - oref[i]); s2 += oref[i] * oref[i]; }
+                    return 10 * std::log10 (std::max (e, 1e-300) / s2);
+                };
+                const double r1 = resid (sw + fade, sw + fade + (size_t) (0.25 * fs));
+                const double r2 = resid (sw + fade + (size_t) (0.25 * fs), N);
+                char b[160];
+                if (test == 0)
+                {
+                    std::snprintf (b, sizeof b, "Rene 41: after fade %.1f dB / %.1f dB re signal (limit -120: every contour runs continuously)", r1, r2);
+                    check (r1 <= -120.0 && r2 <= -120.0, "Subtle -> Color converges exactly", b);
+                }
+                else
+                {
+                    std::snprintf (b, sizeof b, "Copper -> Rene 41 in Color: 0-250 ms %.1f dB, 250 ms-3 s %.1f dB re signal (limit -60 / -90)", r1, r2);
+                    check (r1 <= -60.0 && r2 <= -90.0, "Color metal change converges", b);
+                }
+                std::snprintf (b, sizeof b, "max sample step in switch window %.5f vs programme max %.5f", maxStep, maxStepRef);
+                check (maxStep <= maxStepRef * 1.05, test == 0 ? "No click (Subtle -> Color)" : "No click (metal change in Color)", b);
+            }
+        }
+
+        // L6. Silence, impulse, latency in Color
+        {
+            Channel630 ch; ch.prepare (bankFor (FS_LO), 14, true);
+            double mx = 0; for (int i = 0; i < 100000; ++i) mx = std::max (mx, std::abs (ch.process (0.0)));
+            check (mx == 0.0, "Color: digital silence in -> exact zero out", "");
+            for (double fs : { FS_LO, FS_HI })
+                for (int m : { 0, 2, 4, 14 })
+                {
+                    Channel630 c; c.prepare (bankFor (fs), m, true);
+                    std::vector<double> ir (1 << 16);
+                    for (size_t i = 0; i < ir.size(); ++i) ir[i] = c.process (i == 0 ? 1.0 : 0.0);
+                    size_t pk = 0; for (size_t i = 0; i < ir.size(); ++i) if (std::abs (ir[i]) > std::abs (ir[pk])) pk = i;
+                    // Nyquist ringing detector: energy of the alternating component of the tail,
+                    // (x[n] - 2x[n-1] + x[n-2])/4, relative to its smooth component,
+                    // (x[n] + 2x[n-1] + x[n-2])/4. A smooth decay of time constant tau samples
+                    // gives about (1/(4 tau^2))^2; sample-to-sample ringing gives >> 1.
+                    double ea = 0, es = 0;
+                    for (size_t i = 64; i < ir.size(); ++i)
+                    {
+                        const double a = 0.25 * (ir[i] - 2 * ir[i - 1] + ir[i - 2]), sm = 0.25 * (ir[i] + 2 * ir[i - 1] + ir[i - 2]);
+                        ea += a * a; es += sm * sm;
+                    }
+                    const double ratio = ea / std::max (es, 1e-300);
+                    char b[200]; std::snprintf (b, sizeof b, "%.1f kHz %s: peak at sample %zu, tail alternating/smooth energy %.2e (limit 1e-3, or alternating energy %.1e < 1e-24)",
+                                                fs / 1000.0, kMetals[(size_t) m].menuName, pk, ratio, ea);
+                    check (pk == 0 && (ratio < 1e-3 || ea < 1e-24), "Color: zero latency, no ringing", b);
+                }
+        }
+    }
+    std::printf ("\n");
+
+    //--------------------------------------------------------------------------
     std::printf ("K. CPU (single core, this machine)\n");
     for (double fs : { FS_LO, FS_HI })
     {
-        Channel630 ch; ch.prepare (bankFor (fs), 11);
-        const auto pn = pinkNoise ((size_t) (5 * fs), -18.0, 3);
+        Channel630 ch; ch.prepare (bankFor (fs), 11, true);
+        const auto pn = pinkNoise ((size_t) (5 * fs), -18.0, 3, fs);
         const auto t0 = std::chrono::steady_clock::now();
         double sink = 0; for (double x : pn) sink += ch.process (x);
         const double sec = std::chrono::duration<double> (std::chrono::steady_clock::now() - t0).count();

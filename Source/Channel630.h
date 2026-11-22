@@ -3,6 +3,7 @@
     Superalloy — Channel630.h
     One audio channel:
         DC-free drive → transformer pair (selected metal) → skin shelf → makeup
+        → CONTOUR (Subtle: nothing; Color: per-metal linear contour)
 
     Seamless metal changes. Every metal's two cores are kept magnetised in the
     background by a small-signal "shadow" model of that metal, so the incoming
@@ -15,6 +16,7 @@
 
 #include "TransformerEngine.h"
 #include "SkinShelf.h"
+#include "ColorContour.h"
 #include <array>
 #include <cmath>
 #include <algorithm>
@@ -29,9 +31,17 @@ namespace superalloy
         std::array<double, kNumMetals> makeup {};
         // shadow model: inverse of the constant 2×2 small-signal matrix
         std::array<double, kNumMetals> i11 {}, i12 {}, i22 {}, g1 {};
+        std::array<ColorDesign, kNumMetals> color {};
         double h = 0.0, fs = 0.0;
 
-        void prepare (double sampleRate) noexcept
+        // Magnitude of the Subtle chain for one metal (small signal).
+        double subtleMagnitude (int m, double hz) const noexcept
+        {
+            return std::abs (design::networkTransfer (m, design::warpedHz (hz, fs)))
+                 * shelf[(size_t) m].magnitudeAt (hz, fs) * makeup[(size_t) m];
+        }
+
+        void prepare (double sampleRate)
         {
             fs = sampleRate;
             h = 0.5 / sampleRate;
@@ -49,6 +59,8 @@ namespace superalloy
                 const double net = std::abs (design::networkTransfer (m, design::warpedHz (1000.0, fs)));
                 makeup[(size_t) m] = 1.0 / (net * shelf[(size_t) m].magnitudeAt (1000.0, fs));
             }
+            for (int m = 0; m < kNumMetals; ++m)
+                color[(size_t) m].design (m, fs, [this, m] (double hz) { return subtleMagnitude (m, hz); });
         }
     };
 
@@ -58,7 +70,7 @@ namespace superalloy
     public:
         static constexpr double kCrossfadeSeconds = 0.040;
 
-        void prepare (const MetalBank& sharedBank, int metalIndex) noexcept
+        void prepare (const MetalBank& sharedBank, int metalIndex, bool colorOn = false) noexcept
         {
             bank = &sharedBank;
             const double fs = bank->fs;
@@ -79,6 +91,8 @@ namespace superalloy
             hpB0 = 1.0 / (1.0 + K);
             hpA1 = (1.0 - K) / (1.0 + K);
             hpX1 = hpY1 = 0.0;
+
+            color.prepare (bank->color, fs, colorOn);
         }
 
         void reset() noexcept
@@ -87,6 +101,7 @@ namespace superalloy
             shadow.fill (CoreStates {});
             fadePos = -1;
             hpX1 = hpY1 = 0.0;
+            color.reset();
         }
 
         // Safe to call at any time (the plugin calls it at block boundaries).
@@ -114,12 +129,25 @@ namespace superalloy
             fadePos = 0;
         }
 
+        // CONTOUR: false = Subtle, true = Color. Seamless (40 ms crossfade).
+        void selectColor (bool on) noexcept  { color.setColor (on); }
+        bool isColor() const noexcept        { return color.isColor(); }
+
         int  getTargetMetal() const noexcept { return target; }
         bool isFading() const noexcept       { return fadePos >= 0; }
         TransformerEngine& getActiveEngine() noexcept { return eng[active]; }
 
         // x: sample value (1.0 = 0 dBFS). Returns sample value.
         double process (double x) noexcept
+        {
+            int from, to;
+            double w;
+            const double y = processSubtle (x, from, to, w);
+            return color.process (y, from, to, w);
+        }
+
+    private:
+        double processSubtle (double x, int& from, int& to, double& w) noexcept
         {
             const double y = hpB0 * (x - hpX1) + hpA1 * hpY1;   // DC-free drive
             hpX1 = x; hpY1 = y;
@@ -129,12 +157,15 @@ namespace superalloy
 
             const double outA = runSlot (active, vIn);
             shadow[(size_t) eng[active].getMetal()] = eng[active].getStates(); // exact state of the running metal
+            from = to = eng[active].getMetal();
+            w = 1.0;
             if (fadePos < 0)
                 return outA;
 
             const double outB = runSlot (1 - active, vIn);
             shadow[(size_t) eng[1 - active].getMetal()] = eng[1 - active].getStates();
-            const double w = (double) (fadePos + 1) / (double) fadeLen;
+            w = (double) (fadePos + 1) / (double) fadeLen;
+            to = eng[1 - active].getMetal();
             const double out = outA + w * (outB - outA);
             if (++fadePos >= fadeLen)
             {
@@ -144,7 +175,6 @@ namespace superalloy
             return out;
         }
 
-    private:
         double runSlot (int s, double vIn) noexcept
         {
             const int m = eng[s].getMetal();
@@ -175,5 +205,6 @@ namespace superalloy
         int active = 0, target = kDefaultMetal;
         int fadeLen = 1, fadePos = -1;
         double hpB0 = 1.0, hpA1 = 1.0, hpX1 = 0.0, hpY1 = 0.0;
+        ColorStage color;
     };
 }

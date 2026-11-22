@@ -19,11 +19,18 @@ juce::StringArray SuperalloyAudioProcessor::metalNames()
     return names;
 }
 
+juce::StringArray SuperalloyAudioProcessor::contourNames()
+{
+    return { "Subtle", "Color" };
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout SuperalloyAudioProcessor::createLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "metal", 1 },
                                                               "Metal", metalNames(), kDefaultMetal));
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "contour", 2 },
+                                                              "Contour", contourNames(), 0));
     return layout;
 }
 
@@ -34,10 +41,11 @@ SuperalloyAudioProcessor::SuperalloyAudioProcessor()
       apvts (*this, nullptr, "Superalloy", createLayout())
 {
     metalParam = apvts.getRawParameterValue ("metal");
+    contourParam = apvts.getRawParameterValue ("contour");
 }
 
 //==============================================================================
-// Design data (skin-shelf fits, makeup gains, shadow matrices) depends only on
+// Design data (skin-shelf fits, makeup gains, shadow matrices, Color contours) depends only on
 // the sample rate. It is computed once per rate and shared by every instance.
 std::shared_ptr<const MetalBank> SuperalloyAudioProcessor::bankForRate (double sampleRate)
 {
@@ -56,9 +64,10 @@ void SuperalloyAudioProcessor::prepareToPlay (double sampleRate, int)
 {
     bank = bankForRate (sampleRate);
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
+    const bool color = contourParam->load() >= 0.5f;
     channels.assign ((size_t) juce::jmax (1, getTotalNumOutputChannels()), Channel630 {});
     for (auto& c : channels)
-        c.prepare (*bank, metal);
+        c.prepare (*bank, metal, color);
     setLatencySamples (0);
 }
 
@@ -87,11 +96,13 @@ void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer
     const int numCh = juce::jmin (buffer.getNumChannels(), (int) channels.size());
     const int n = buffer.getNumSamples();
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
+    const bool color = contourParam->load() >= 0.5f;
 
     for (int ch = 0; ch < numCh; ++ch)
     {
         auto& c = channels[(size_t) ch];
         c.selectMetal (metal);                      // seamless: 40 ms crossfade inside
+        c.selectColor (color);                      // seamless: 40 ms crossfade inside
         Sample* d = buffer.getWritePointer (ch);
         for (int i = 0; i < n; ++i)
             d[i] = (Sample) c.process ((double) d[i]);

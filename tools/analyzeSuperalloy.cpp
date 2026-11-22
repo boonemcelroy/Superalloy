@@ -20,7 +20,7 @@
     quadratic trend (absorbs the slow 0.01 Hz drive-blocker and magnetising
     transients).
 
-    Usage: analyzeSuperalloy <out-dir> [sampleRate]   (default 352800)
+    Usage: analyzeSuperalloy [--color] <out-dir> [sampleRate]   (default 352800)
   ==============================================================================
 */
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -102,10 +102,11 @@ namespace
     // One mono processor per metal.
     struct Rig
     {
-        Rig (int metal, double sampleRate) : fs (sampleRate)
+        Rig (int metal, double sampleRate, bool color = false) : fs (sampleRate)
         {
             auto* p = proc.apvts.getParameter ("metal");
             p->setValueNotifyingHost (p->convertTo0to1 ((float) metal));
+            proc.apvts.getParameter ("contour")->setValueNotifyingHost (color ? 1.0f : 0.0f);
             juce::AudioProcessor::BusesLayout mono;
             mono.inputBuses.add (juce::AudioChannelSet::mono());
             mono.outputBuses.add (juce::AudioChannelSet::mono());
@@ -262,24 +263,54 @@ namespace
     }
 
     //==========================================================================
-    // Paul Kellet's refined pink filter on seeded white noise.
-    std::vector<double> pinkNoise (int n, double rmsDBFS, unsigned seed)
+    // Exact pink noise at any sample rate: white Gaussian noise shaped by 1/sqrt(f)
+    // in the frequency domain (1 Hz to Nyquist), normalised to the requested RMS.
+    std::vector<double> pinkNoise (int n, double rmsDBFS, unsigned seed, double fs)
     {
+        int order = 1; while ((1 << order) < n) ++order;
+        const int n2 = 1 << order;
         std::mt19937_64 rng (seed);
         std::normal_distribution<double> nd (0.0, 1.0);
-        std::vector<double> v ((size_t) n);
-        double b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-        for (int i = 0; i < n; ++i)
+        std::vector<std::complex<double>> a ((size_t) n2);
+        for (auto& x : a) x = { nd (rng), 0.0 };
+        auto fft = [&] (bool inverse)
         {
-            const double w = nd (rng);
-            b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759;
-            b2 = 0.96900 * b2 + w * 0.1538520; b3 = 0.86650 * b3 + w * 0.3104856;
-            b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980;
-            v[(size_t) i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362;
-            b6 = w * 0.115926;
+            for (int i = 1, j = 0; i < n2; ++i)
+            {
+                int bit = n2 >> 1;
+                for (; j & bit; bit >>= 1) j ^= bit;
+                j ^= bit;
+                if (i < j) std::swap (a[(size_t) i], a[(size_t) j]);
+            }
+            for (int len = 2; len <= n2; len <<= 1)
+            {
+                const double ang = 2.0 * kPi / len * (inverse ? 1.0 : -1.0);
+                const std::complex<double> wl (std::cos (ang), std::sin (ang));
+                for (int i = 0; i < n2; i += len)
+                {
+                    std::complex<double> w (1.0, 0.0);
+                    for (int k = 0; k < len / 2; ++k)
+                    {
+                        const auto u = a[(size_t) (i + k)], v = a[(size_t) (i + k + len / 2)] * w;
+                        a[(size_t) (i + k)] = u + v; a[(size_t) (i + k + len / 2)] = u - v;
+                        w *= wl;
+                    }
+                }
+            }
+            if (inverse) for (auto& x : a) x /= (double) n2;
+        };
+        fft (false);
+        for (int k = 0; k <= n2 / 2; ++k)
+        {
+            const double f = (double) k * fs / n2;
+            a[(size_t) k] *= f >= 1.0 ? 1.0 / std::sqrt (f) : 0.0;
+            if (k > 0 && k < n2 / 2) a[(size_t) (n2 - k)] = std::conj (a[(size_t) k]);
         }
-        double mean = 0; for (double x : v) mean += x; mean /= n;
-        double ss = 0; for (auto& x : v) { x -= mean; ss += x * x; }
+        a[(size_t) (n2 / 2)] = { a[(size_t) (n2 / 2)].real(), 0.0 };
+        fft (true);
+        std::vector<double> v ((size_t) n);
+        double ss = 0;
+        for (int i = 0; i < n; ++i) { v[(size_t) i] = a[(size_t) i].real(); ss += v[(size_t) i] * v[(size_t) i]; }
         const double g = std::pow (10.0, rmsDBFS / 20.0) / std::sqrt (ss / n);
         for (auto& x : v) x *= g;
         return v;
@@ -331,6 +362,13 @@ namespace
 int main (int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI init;
+    bool color = false;
+    {
+        int w = 1;
+        for (int i = 1; i < argc; ++i)
+            if (std::string (argv[i]) == "--color") color = true; else argv[w++] = argv[i];
+        argc = w;
+    }
 
     // Diagnostic: how the 20 Hz, 0 dBFS harmonics depend on settle time.
     if (argc > 1 && std::string (argv[1]) == "--settle-test")
@@ -381,7 +419,7 @@ int main (int argc, char** argv)
     std::mutex lock;
 
     const int pinkLen = (int) std::lround (8.0 * fs);
-    const auto pink = pinkNoise (pinkLen, -16.0, 630u);
+    const auto pink = pinkNoise (pinkLen, -16.0, 630u, fs);
     {
         inputBands = thirdOctave (pink, fs, centres);
     }
@@ -390,7 +428,7 @@ int main (int argc, char** argv)
     // cancels everything the metals share (drive DC blocker, cores, makeup)
     std::vector<double> scOut ((size_t) pinkLen);
     {
-        Rig sc (0, fs);
+        Rig sc (0, fs, color);
         sc.run (pinkLen, [&] (int n) { return pink[(size_t) n]; },
                 [&] (int n, double, double y) { scOut[(size_t) n] = y; });
     }
@@ -400,7 +438,7 @@ int main (int argc, char** argv)
     {
         workers.emplace_back ([&, m]
         {
-            Rig rig (m, fs);
+            Rig rig (m, fs, color);
             auto& R = res[(size_t) m];
 
             for (double lv : thdLevelsFreq)
