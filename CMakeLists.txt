@@ -6,7 +6,7 @@
 #  fetches JUCE 9.0.6 from GitHub.
 # ==============================================================================
 cmake_minimum_required (VERSION 3.22)
-project (Superalloy VERSION 6.2.0 LANGUAGES C CXX)
+project (Superalloy VERSION 6.3.0 LANGUAGES C CXX)
 
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,7 +44,7 @@ juce_add_plugin (Superalloy
     PLUGIN_MANUFACTURER_CODE   Wvry
     PLUGIN_CODE                Salo
     PRODUCT_NAME               "Superalloy"
-    VERSION                    6.2.0
+    VERSION                    6.3.0
     FORMATS                    ${WAVRELY_FORMATS}
     IS_SYNTH                   FALSE
     NEEDS_MIDI_INPUT           FALSE
@@ -129,5 +129,19 @@ if (WAVRELY_BUILD_MEASURE)
         target_compile_options (measureSuperalloy PRIVATE /fp:precise /utf-8)
     else ()
         target_compile_options (measureSuperalloy PRIVATE -fno-fast-math -ffp-contract=off)
+    endif ()
+endif ()
+
+# ---------------------------------------------------- host check (end-to-end)
+# Loads the built Superalloy.vst3 in JUCE's VST3 host and drives it through its
+# parameters: hookup, audible effect, true bypass, seamless re-engage, recall.
+option (WAVRELY_BUILD_HOSTCHECK "Build the VST3 host check tool" OFF)
+if (WAVRELY_BUILD_HOSTCHECK)
+    juce_add_console_app (hostcheckSuperalloy PRODUCT_NAME "hostcheckSuperalloy")
+    target_sources (hostcheckSuperalloy PRIVATE tools/hostcheckSuperalloy.cpp)
+    target_compile_definitions (hostcheckSuperalloy PRIVATE JUCE_PLUGINHOST_VST3=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    target_link_libraries (hostcheckSuperalloy PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_gui_extra)
+    if (MSVC)
+        target_compile_options (hostcheckSuperalloy PRIVATE /utf-8)
     endif ()
 endif ()

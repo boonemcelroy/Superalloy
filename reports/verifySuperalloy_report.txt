@@ -191,8 +191,21 @@ L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01
   [PASS] Color: zero latency, no ringing 352.8 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 4.26e-11 (limit 1e-3, or alternating energy 1.3e-16 < 1e-24)
   [PASS] Color: zero latency, no ringing 352.8 kHz René 41: peak at sample 0, tail alternating/smooth energy 6.58e-17 (limit 1e-3, or alternating energy 7.9e-21 < 1e-24)
 
+M. BYPASS (true bypass: settled output == input bit for bit; engine keeps running; 40 ms crossfade)
+  [PASS] Bypass is bit-exact max |output - input| = 0 (must be exactly 0), incl. metal + contour changes while bypassed
+  [PASS] Bypass engaged mid-programme is bit-exact while bypassed: max |output - input| = 0 (must be 0)
+  [PASS] Re-engage is seamless after re-engage: max |output - never-bypassed channel| = 0 (must be 0: the engine never stopped)
+  [PASS] No click (bypass in / out) max sample step in both 40 ms fades 0.04253 vs processed 0.04882 / input 0.05066
+    engaged Subtle Superconductor (NbTi, 0 Ω reference)    residual vs input   -75.0 dB
+    engaged Subtle Copper — Grade 1 6N OFC                residual vs input   -60.2 dB
+    engaged Subtle René 41                                 residual vs input   -25.8 dB
+    engaged Color  Superconductor (NbTi, 0 Ω reference)    residual vs input   -75.0 dB
+    engaged Color  Copper — Grade 1 6N OFC                residual vs input   -31.9 dB
+    engaged Color  René 41                                 residual vs input   -14.8 dB
+  [PASS] Effect is audible when engaged every metal changes the signal when engaged (residual > -120 dB; Color Rene 41 > -30 dB)
+
 K. CPU (single core, this machine)
-  fs 44.1 kHz: 409.4 ns/sample/channel, stereo uses 3.6 % of one core (x2 during a fade)
-  fs 352.8 kHz: 288.2 ns/sample/channel, stereo uses 20.3 % of one core (x2 during a fade)
+  fs 44.1 kHz: 245.4 ns/sample/channel, stereo uses 2.2 % of one core (x2 during a fade)
+  fs 352.8 kHz: 243.5 ns/sample/channel, stereo uses 17.2 % of one core (x2 during a fade)
 
 RESULT: ALL TESTS PASSED (0 failures)

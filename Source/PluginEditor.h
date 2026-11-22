@@ -1,8 +1,9 @@
 /*
   ==============================================================================
     Superalloy — PluginEditor.h
-    A medium heat-tinted Inconel rectangle with one dropdown ("Metal") and one
-    two-position switch ("Contour": Subtle / Color).
+    A medium heat-tinted Inconel rectangle with one dropdown ("Metal"), one
+    two-position switch ("Contour": Subtle / Color) and, top right, a
+    two-position "Bypass" switch (Off / On) in the same style.
   ==============================================================================
 */
 #pragma once
@@ -23,11 +24,13 @@ public:
 };
 
 //==============================================================================
-// Two-segment switch bound to the "contour" choice parameter.
-class ContourSwitch final : public juce::Component
+// Two-segment switch bound to a two-state parameter (choice with 2 items, or bool).
+// Left segment = value 0, right segment = value 1.
+class SegmentSwitch final : public juce::Component
 {
 public:
-    explicit ContourSwitch (juce::RangedAudioParameter& param);
+    SegmentSwitch (juce::RangedAudioParameter& param, juce::String leftText, juce::String rightText,
+                   const juce::String& title, const juce::String& description);
 
     void paint (juce::Graphics&) override;
     void mouseUp (const juce::MouseEvent&) override;
@@ -37,9 +40,10 @@ private:
     void select (int index);
 
     juce::ParameterAttachment attachment;
+    juce::String left, right;
     int current = 0;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ContourSwitch)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SegmentSwitch)
 };
 
 //==============================================================================
@@ -60,7 +64,8 @@ private:
     juce::Image background;
     juce::ComboBox metalBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> attachment;
-    ContourSwitch contour;
+    SegmentSwitch contour;
+    SegmentSwitch bypass;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SuperalloyAudioProcessorEditor)
 };

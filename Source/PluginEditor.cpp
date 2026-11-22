@@ -63,30 +63,32 @@ juce::Font SuperalloyLookAndFeel::getPopupMenuFont()
 }
 
 //==============================================================================
-ContourSwitch::ContourSwitch (juce::RangedAudioParameter& param)
-    : attachment (param, [this] (float v) { current = juce::jlimit (0, 1, (int) std::lround (v)); repaint(); })
+SegmentSwitch::SegmentSwitch (juce::RangedAudioParameter& param, juce::String leftText, juce::String rightText,
+                              const juce::String& title, const juce::String& description)
+    : attachment (param, [this] (float v) { current = juce::jlimit (0, 1, (int) std::lround (v)); repaint(); }),
+      left (std::move (leftText)), right (std::move (rightText))
 {
-    setTitle ("Contour");
-    setDescription ("Subtle or Color");
+    setTitle (title);
+    setDescription (description);
     setWantsKeyboardFocus (true);
     setMouseCursor (juce::MouseCursor::PointingHandCursor);
     attachment.sendInitialUpdate();
 }
 
-void ContourSwitch::select (int index)
+void SegmentSwitch::select (int index)
 {
     index = juce::jlimit (0, 1, index);
     if (index != current)
         attachment.setValueAsCompleteGesture ((float) index);
 }
 
-void ContourSwitch::mouseUp (const juce::MouseEvent& e)
+void SegmentSwitch::mouseUp (const juce::MouseEvent& e)
 {
     if (getLocalBounds().contains (e.getPosition()))
         select (e.x < getWidth() / 2 ? 0 : 1);
 }
 
-bool ContourSwitch::keyPressed (const juce::KeyPress& k)
+bool SegmentSwitch::keyPressed (const juce::KeyPress& k)
 {
     if (k == juce::KeyPress::leftKey)  { select (0); return true; }
     if (k == juce::KeyPress::rightKey) { select (1); return true; }
@@ -94,7 +96,7 @@ bool ContourSwitch::keyPressed (const juce::KeyPress& k)
     return false;
 }
 
-void ContourSwitch::paint (juce::Graphics& g)
+void SegmentSwitch::paint (juce::Graphics& g)
 {
     const auto r = getLocalBounds().toFloat().reduced (0.5f);
     const float radius = r.getHeight() * 0.5f;
@@ -121,18 +123,19 @@ void ContourSwitch::paint (juce::Graphics& g)
     }
 
     g.setFont (juce::Font (juce::FontOptions (13.0f)).withExtraKerningFactor (0.22f));
-    const auto left = getLocalBounds().removeFromLeft (getWidth() / 2);
-    const auto right = getLocalBounds().removeFromRight (getWidth() - getWidth() / 2);
+    const auto leftArea = getLocalBounds().removeFromLeft (getWidth() / 2);
+    const auto rightArea = getLocalBounds().removeFromRight (getWidth() - getWidth() / 2);
     g.setColour (current == 0 ? kTextBright : kTextDim);
-    g.drawText ("SUBTLE", left, juce::Justification::centred);
+    g.drawText (left, leftArea, juce::Justification::centred);
     g.setColour (current == 1 ? kTextBright : kTextDim);
-    g.drawText ("COLOR", right, juce::Justification::centred);
+    g.drawText (right, rightArea, juce::Justification::centred);
 }
 
 //==============================================================================
 SuperalloyAudioProcessorEditor::SuperalloyAudioProcessorEditor (SuperalloyAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p),
-      contour (*p.apvts.getParameter ("contour"))
+      contour (*p.apvts.getParameter ("contour"), "SUBTLE", "COLOR", "Contour", "Subtle or Color"),
+      bypass  (*p.apvts.getParameter ("bypass"),  "OFF",    "ON",    "Bypass",  "True bypass: On passes the input through untouched")
 {
     setLookAndFeel (&lnf);
     background = superalloy::texture::renderHeatTintedInconel (kWidth, kHeight);
@@ -143,6 +146,7 @@ SuperalloyAudioProcessorEditor::SuperalloyAudioProcessorEditor (SuperalloyAudioP
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (processorRef.apvts, "metal", metalBox);
 
     addAndMakeVisible (contour);
+    addAndMakeVisible (bypass);
 
     setResizable (false, false);
     setSize (kWidth, kHeight);
@@ -165,6 +169,8 @@ void SuperalloyAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawText ("METAL", box.getX(), box.getY() - 22, box.getWidth(), 18, juce::Justification::centredLeft);
     const auto sw = contour.getBounds();
     g.drawText ("CONTOUR", sw.getX(), sw.getY() - 22, sw.getWidth(), 18, juce::Justification::centredLeft);
+    const auto bp = bypass.getBounds();
+    g.drawText ("BYPASS", bp.getX(), bp.getY() - 22, bp.getWidth(), 18, juce::Justification::centredLeft);
 
     // machined edge
     g.setColour (juce::Colour (0x40000000));
@@ -177,4 +183,7 @@ void SuperalloyAudioProcessorEditor::resized()
     contour.setBounds (juce::Rectangle<int> (0, 0, 240, 32)
                            .withX (metalBox.getX())
                            .withY (metalBox.getBottom() + 44));
+    bypass.setBounds (juce::Rectangle<int> (0, 0, 150, 32)
+                          .withX (kWidth - 20 - 150)
+                          .withY (38));
 }

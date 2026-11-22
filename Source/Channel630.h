@@ -4,11 +4,14 @@
     One audio channel:
         DC-free drive → transformer pair (selected metal) → skin shelf → makeup
         → CONTOUR (Subtle: nothing; Color: per-metal linear contour)
+        → BYPASS  (true bypass: once settled, output == input, bit for bit)
 
     Seamless metal changes. Every metal's two cores are kept magnetised in the
     background by a small-signal "shadow" model of that metal, so the incoming
     engine starts from its OWN consistent flux state (not the outgoing metal's).
     The two engines are then equal-gain crossfaded over 40 ms.
+    Bypass is a 40 ms crossfade to the untouched input; the engine keeps
+    running while bypassed, so re-engaging is seamless (no stale state).
     Latency: zero samples.
   ==============================================================================
 */
@@ -70,7 +73,7 @@ namespace superalloy
     public:
         static constexpr double kCrossfadeSeconds = 0.040;
 
-        void prepare (const MetalBank& sharedBank, int metalIndex, bool colorOn = false) noexcept
+        void prepare (const MetalBank& sharedBank, int metalIndex, bool colorOn = false, bool bypassOn = false) noexcept
         {
             bank = &sharedBank;
             const double fs = bank->fs;
@@ -93,6 +96,11 @@ namespace superalloy
             hpX1 = hpY1 = 0.0;
 
             color.prepare (bank->color, fs, colorOn);
+
+            bypassLen = std::max (1, (int) std::lround (kCrossfadeSeconds * fs));
+            bypassTarget = bypassOn;
+            bypassMix = bypassOn ? 1.0 : 0.0;
+            bypassPos = -1;
         }
 
         void reset() noexcept
@@ -102,6 +110,8 @@ namespace superalloy
             fadePos = -1;
             hpX1 = hpY1 = 0.0;
             color.reset();
+            bypassPos = -1;                               // a reset settles any bypass fade
+            bypassMix = bypassTarget ? 1.0 : 0.0;
         }
 
         // Safe to call at any time (the plugin calls it at block boundaries).
@@ -133,6 +143,16 @@ namespace superalloy
         void selectColor (bool on) noexcept  { color.setColor (on); }
         bool isColor() const noexcept        { return color.isColor(); }
 
+        // BYPASS: true = output is the untouched input. Seamless (40 ms crossfade).
+        void selectBypass (bool on) noexcept
+        {
+            if (on == bypassTarget) return;
+            bypassTarget = on;
+            bypassFrom = bypassMix;
+            bypassPos = 0;
+        }
+        bool isBypassed() const noexcept     { return bypassTarget; }
+
         int  getTargetMetal() const noexcept { return target; }
         bool isFading() const noexcept       { return fadePos >= 0; }
         TransformerEngine& getActiveEngine() noexcept { return eng[active]; }
@@ -140,10 +160,23 @@ namespace superalloy
         // x: sample value (1.0 = 0 dBFS). Returns sample value.
         double process (double x) noexcept
         {
-            int from, to;
-            double w;
-            const double y = processSubtle (x, from, to, w);
-            return color.process (y, from, to, w);
+            int from = 0, to = 0;
+            double w = 1.0;
+            const double sub = processSubtle (x, from, to, w);        // engine always runs (sets from/to/w)
+            const double y = color.process (sub, from, to, w);        // separate statement: argument order is unspecified in C++
+
+            if (bypassPos < 0)
+                return bypassTarget ? x : y;                 // settled: exactly the input, or exactly processed
+
+            const double t = (double) (bypassPos + 1) / (double) bypassLen;
+            bypassMix = bypassFrom + ((bypassTarget ? 1.0 : 0.0) - bypassFrom) * t;   // amount of dry input
+            if (++bypassPos >= bypassLen)
+            {
+                bypassPos = -1;
+                bypassMix = bypassTarget ? 1.0 : 0.0;
+                return bypassTarget ? x : y;
+            }
+            return y + bypassMix * (x - y);
         }
 
     private:
@@ -206,5 +239,8 @@ namespace superalloy
         int fadeLen = 1, fadePos = -1;
         double hpB0 = 1.0, hpA1 = 1.0, hpX1 = 0.0, hpY1 = 0.0;
         ColorStage color;
+        bool bypassTarget = false;
+        double bypassMix = 0.0, bypassFrom = 0.0;
+        int bypassLen = 1, bypassPos = -1;
     };
 }

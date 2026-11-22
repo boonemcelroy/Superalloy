@@ -1,5 +1,5 @@
 Started validating: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
-Random seed: 0x115a4f6
+Random seed: 0x2f13742
 Validation started
 Strictness level: 10
 -----------------------------------------------------------------
@@ -7,7 +7,7 @@ Starting tests in: pluginval / Scan for plugins located in: /home/claude/Superal
 Num plugins found: 1
 
 Testing plugin: VST3-Superalloy-2d4ebbf8-39215aa0
-wavRely Mastering Systems: Superalloy v6.2.0
+wavRely Mastering Systems: Superalloy v6.3.0
 Completed tests in pluginval / Scan for plugins located in: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
 -----------------------------------------------------------------
 Starting tests in: pluginval / Open plugin (cold)...
@@ -31,46 +31,50 @@ Num programs: 0
 All program names checked
 Completed tests in pluginval / Plugin programs
 -----------------------------------------------------------------
-Starting tests in: pluginval / Editor...
-Completed tests in pluginval / Editor
------------------------------------------------------------------
-Starting tests in: pluginval / Open editor whilst processing...
-Completed tests in pluginval / Open editor whilst processing
------------------------------------------------------------------
 Starting tests in: pluginval / Audio processing...
+Testing with sample rate [44100] and block size [1]
 Testing with sample rate [44100] and block size [64]
-Testing with sample rate [44100] and block size [128]
-Testing with sample rate [44100] and block size [256]
 Testing with sample rate [44100] and block size [512]
-Testing with sample rate [44100] and block size [1024]
+Testing with sample rate [44100] and block size [4096]
+Testing with sample rate [48000] and block size [1]
 Testing with sample rate [48000] and block size [64]
-Testing with sample rate [48000] and block size [128]
-Testing with sample rate [48000] and block size [256]
 Testing with sample rate [48000] and block size [512]
-Testing with sample rate [48000] and block size [1024]
+Testing with sample rate [48000] and block size [4096]
+Testing with sample rate [96000] and block size [1]
 Testing with sample rate [96000] and block size [64]
-Testing with sample rate [96000] and block size [128]
-Testing with sample rate [96000] and block size [256]
 Testing with sample rate [96000] and block size [512]
-Testing with sample rate [96000] and block size [1024]
+Testing with sample rate [96000] and block size [4096]
+Testing with sample rate [192000] and block size [1]
+Testing with sample rate [192000] and block size [64]
+Testing with sample rate [192000] and block size [512]
+Testing with sample rate [192000] and block size [4096]
+Testing with sample rate [352800] and block size [1]
+Testing with sample rate [352800] and block size [64]
+Testing with sample rate [352800] and block size [512]
+Testing with sample rate [352800] and block size [4096]
 Completed tests in pluginval / Audio processing
 -----------------------------------------------------------------
 Starting tests in: pluginval / Non-releasing audio processing...
+Testing with sample rate [44100] and block size [1]
 Testing with sample rate [44100] and block size [64]
-Testing with sample rate [44100] and block size [128]
-Testing with sample rate [44100] and block size [256]
 Testing with sample rate [44100] and block size [512]
-Testing with sample rate [44100] and block size [1024]
+Testing with sample rate [44100] and block size [4096]
+Testing with sample rate [48000] and block size [1]
 Testing with sample rate [48000] and block size [64]
-Testing with sample rate [48000] and block size [128]
-Testing with sample rate [48000] and block size [256]
 Testing with sample rate [48000] and block size [512]
-Testing with sample rate [48000] and block size [1024]
+Testing with sample rate [48000] and block size [4096]
+Testing with sample rate [96000] and block size [1]
 Testing with sample rate [96000] and block size [64]
-Testing with sample rate [96000] and block size [128]
-Testing with sample rate [96000] and block size [256]
 Testing with sample rate [96000] and block size [512]
-Testing with sample rate [96000] and block size [1024]
+Testing with sample rate [96000] and block size [4096]
+Testing with sample rate [192000] and block size [1]
+Testing with sample rate [192000] and block size [64]
+Testing with sample rate [192000] and block size [512]
+Testing with sample rate [192000] and block size [4096]
+Testing with sample rate [352800] and block size [1]
+Testing with sample rate [352800] and block size [64]
+Testing with sample rate [352800] and block size [512]
+Testing with sample rate [352800] and block size [4096]
 Completed tests in pluginval / Non-releasing audio processing
 -----------------------------------------------------------------
 Starting tests in: pluginval / Plugin state...
@@ -80,34 +84,33 @@ Starting tests in: pluginval / Plugin state restoration...
 Completed tests in pluginval / Plugin state restoration
 -----------------------------------------------------------------
 Starting tests in: pluginval / Automation...
+Testing with sample rate [44100] and block size [1] and sub-block size [32]
 Testing with sample rate [44100] and block size [64] and sub-block size [32]
-Testing with sample rate [44100] and block size [128] and sub-block size [32]
-Testing with sample rate [44100] and block size [256] and sub-block size [32]
 Testing with sample rate [44100] and block size [512] and sub-block size [32]
-Testing with sample rate [44100] and block size [1024] and sub-block size [32]
+Testing with sample rate [44100] and block size [4096] and sub-block size [32]
+Testing with sample rate [48000] and block size [1] and sub-block size [32]
 Testing with sample rate [48000] and block size [64] and sub-block size [32]
-Testing with sample rate [48000] and block size [128] and sub-block size [32]
-Testing with sample rate [48000] and block size [256] and sub-block size [32]
 Testing with sample rate [48000] and block size [512] and sub-block size [32]
-Testing with sample rate [48000] and block size [1024] and sub-block size [32]
+Testing with sample rate [48000] and block size [4096] and sub-block size [32]
+Testing with sample rate [96000] and block size [1] and sub-block size [32]
 Testing with sample rate [96000] and block size [64] and sub-block size [32]
-Testing with sample rate [96000] and block size [128] and sub-block size [32]
-Testing with sample rate [96000] and block size [256] and sub-block size [32]
 Testing with sample rate [96000] and block size [512] and sub-block size [32]
-Testing with sample rate [96000] and block size [1024] and sub-block size [32]
+Testing with sample rate [96000] and block size [4096] and sub-block size [32]
+Testing with sample rate [192000] and block size [1] and sub-block size [32]
+Testing with sample rate [192000] and block size [64] and sub-block size [32]
+Testing with sample rate [192000] and block size [512] and sub-block size [32]
+Testing with sample rate [192000] and block size [4096] and sub-block size [32]
+Testing with sample rate [352800] and block size [1] and sub-block size [32]
+Testing with sample rate [352800] and block size [64] and sub-block size [32]
+Testing with sample rate [352800] and block size [512] and sub-block size [32]
+Testing with sample rate [352800] and block size [4096] and sub-block size [32]
 Completed tests in pluginval / Automation
------------------------------------------------------------------
-Starting tests in: pluginval / Editor Automation...
-Completed tests in pluginval / Editor Automation
 -----------------------------------------------------------------
 Starting tests in: pluginval / Automatable Parameters...
 Completed tests in pluginval / Automatable Parameters
 -----------------------------------------------------------------
 Starting tests in: pluginval / Parameters...
 Completed tests in pluginval / Parameters
------------------------------------------------------------------
-Starting tests in: pluginval / Background thread state...
-Completed tests in pluginval / Background thread state
 -----------------------------------------------------------------
 Starting tests in: pluginval / Parameter thread safety...
 Completed tests in pluginval / Parameter thread safety
@@ -147,3 +150,4 @@ Completed tests in pluginval / Restoring default layout
 Starting tests in: pluginval / Fuzz parameters...
 Completed tests in pluginval / Fuzz parameters
 SUCCESS
+pluginval exit 0

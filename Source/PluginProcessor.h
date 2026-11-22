@@ -24,6 +24,11 @@ public:
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
+    // Hosts normally drive bypass through getBypassParameter(); if one calls the
+    // bypassed path anyway, the engine keeps running and the output crossfades to dry.
+    void processBlockBypassed (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed (juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
+    juce::AudioProcessorParameter* getBypassParameter() const override { return bypassParameter; }
     bool supportsDoublePrecisionProcessing() const override { return true; }
 
     //==============================================================================
@@ -54,10 +59,12 @@ private:
     static std::shared_ptr<const superalloy::MetalBank> bankForRate (double sampleRate);
 
     template <typename Sample>
-    void processSamples (juce::AudioBuffer<Sample>& buffer);
+    void processSamples (juce::AudioBuffer<Sample>& buffer, bool forceBypass);
 
     std::atomic<float>* metalParam = nullptr;
     std::atomic<float>* contourParam = nullptr;
+    std::atomic<float>* bypassRaw = nullptr;
+    juce::AudioParameterBool* bypassParameter = nullptr;
     std::shared_ptr<const superalloy::MetalBank> bank;
     std::vector<superalloy::Channel630> channels;
 

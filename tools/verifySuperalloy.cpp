@@ -3,7 +3,7 @@
     Superalloy — verifySuperalloy.cpp
     Stand-alone verification harness. Uses the exact plugin DSP sources
     (TransformerEngine + Channel630 + ColorContour), no JUCE. Every owner ruling is tested.
-    Sections A-K: Contour = Subtle (the rev 6.1 sound). Section L: Contour = Color.
+    Sections A-K: Contour = Subtle (the rev 6.1 sound). Section L: Contour = Color. Section M: Bypass.
 
     Usage:  verifySuperalloy              run all tests, write report to stdout
             verifySuperalloy --calibrate  solve the core shape constant u_r so the
@@ -751,6 +751,89 @@ int main (int argc, char** argv)
                                                 fs / 1000.0, kMetals[(size_t) m].menuName, pk, ratio, ea);
                     check (pk == 0 && (ratio < 1e-3 || ea < 1e-24), "Color: zero latency, no ringing", b);
                 }
+        }
+    }
+    std::printf ("\n");
+
+    //--------------------------------------------------------------------------
+    std::printf ("M. BYPASS (true bypass: settled output == input bit for bit; engine keeps running; 40 ms crossfade)\n");
+    {
+        const double fs = FS_HI;
+        const size_t N = (size_t) (4.0 * fs), fade = (size_t) std::lround (0.040 * fs);
+        auto pn = pinkNoise (N, -18.0, 99);
+        bandLimit (pn, fs);
+        char b[200];
+
+        // M1. Bypassed from prepare(), with metal / contour changes while bypassed: exact input
+        {
+            double worst = 0;
+            for (int m : { 2, 14 })
+                for (bool col : { false, true })
+                {
+                    Channel630 ch; ch.prepare (bankFor (fs), m, col, true);
+                    for (size_t i = 0; i < N / 2; ++i)
+                    {
+                        if (i == N / 8) ch.selectMetal (m == 2 ? 11 : 4);
+                        if (i == N / 4) ch.selectColor (! col);
+                        worst = std::max (worst, std::abs (ch.process (pn[i]) - pn[i]));
+                    }
+                }
+            std::snprintf (b, sizeof b, "max |output - input| = %.3g (must be exactly 0), incl. metal + contour changes while bypassed", worst);
+            check (worst == 0.0, "Bypass is bit-exact", b);
+        }
+
+        // M2. Engaged -> bypass at 1 s -> metal change at 1.5 s (both) -> engaged at 2 s; vs a channel never bypassed
+        {
+            Channel630 a; a.prepare (bankFor (fs), 14, true);
+            Channel630 ref; ref.prepare (bankFor (fs), 14, true);
+            const size_t on = (size_t) fs, sw = (size_t) (1.5 * fs), off = (size_t) (2.0 * fs);
+            double maxStep = 0, maxStepRef = 0, maxStepIn = 0, bypErr = 0, reErr = 0;
+            std::vector<double> oa (N), oref (N);
+            for (size_t i = 0; i < N; ++i)
+            {
+                if (i == on)  a.selectBypass (true);
+                if (i == sw)  { a.selectMetal (2); ref.selectMetal (2); }
+                if (i == off) a.selectBypass (false);
+                oa[i] = a.process (pn[i]);
+                oref[i] = ref.process (pn[i]);
+                if (i > 0)
+                {
+                    maxStepRef = std::max (maxStepRef, std::abs (oref[i] - oref[i - 1]));
+                    maxStepIn  = std::max (maxStepIn,  std::abs (pn[i] - pn[i - 1]));
+                    const bool inFade = (i >= on - 10 && i <= on + fade + 10) || (i >= off - 10 && i <= off + fade + 10);
+                    if (inFade) maxStep = std::max (maxStep, std::abs (oa[i] - oa[i - 1]));
+                }
+                if (i >= on + fade && i < off) bypErr = std::max (bypErr, std::abs (oa[i] - pn[i]));
+                if (i >= off + fade)           reErr  = std::max (reErr,  std::abs (oa[i] - oref[i]));
+            }
+            std::snprintf (b, sizeof b, "while bypassed: max |output - input| = %.3g (must be 0)", bypErr);
+            check (bypErr == 0.0, "Bypass engaged mid-programme is bit-exact", b);
+            std::snprintf (b, sizeof b, "after re-engage: max |output - never-bypassed channel| = %.3g (must be 0: the engine never stopped)", reErr);
+            check (reErr == 0.0, "Re-engage is seamless", b);
+            std::snprintf (b, sizeof b, "max sample step in both 40 ms fades %.5f vs processed %.5f / input %.5f", maxStep, maxStepRef, maxStepIn);
+            check (maxStep <= std::max (maxStepRef, maxStepIn) * 1.05, "No click (bypass in / out)", b);
+        }
+
+        // M3. The effect is in the path when engaged (null against the input, band-limited pink -18 dBFS)
+        {
+            double worstMin = 0; bool allActive = true;
+            for (bool col : { false, true })
+                for (int m : { 0, 2, 14 })
+                {
+                    Channel630 ch; ch.prepare (bankFor (fs), m, col, false);
+                    double e = 0, s2 = 0;
+                    for (size_t i = 0; i < N; ++i)
+                    {
+                        const double y = ch.process (pn[i]);
+                        if (i >= (size_t) fs) { e += (y - pn[i]) * (y - pn[i]); s2 += pn[i] * pn[i]; }
+                    }
+                    const double r = 10 * std::log10 (std::max (e, 1e-300) / s2);
+                    std::printf ("    engaged %-6s %-40s residual vs input %+7.1f dB\n", col ? "Color" : "Subtle", kMetals[(size_t) m].menuName, r);
+                    if (m != 0) { allActive &= r > -120.0; worstMin = std::min (worstMin, r); }
+                    if (col && m == 14) allActive &= r > -30.0;
+                }
+            std::snprintf (b, sizeof b, "every metal changes the signal when engaged (residual > -120 dB; Color Rene 41 > -30 dB)");
+            check (allActive, "Effect is audible when engaged", b);
         }
     }
     std::printf ("\n");

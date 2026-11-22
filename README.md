@@ -1,10 +1,11 @@
-# Superalloy — rev 6.2
+# Superalloy — rev 6.3
 
 One metal at a time, wound into a step-up → 630 V → step-down transformer pair.
-Medium heat-tinted Inconel rectangle with one dropdown, **Metal**, and one two-position switch, **Contour** (Subtle / Color). Zero latency.
+Medium heat-tinted Inconel rectangle with one dropdown, **Metal**, a two-position switch, **Contour** (Subtle / Color), and a **Bypass** switch (Off / On) in the top-right corner. Zero latency.
 
 * **Subtle** is the rev 6.1 sound, bit for bit (0 of 2.38 million samples differ against the rev 6.1 build, including metal switches, at 44.1 and 352.8 kHz).
 * **Color** is the same transformer with an amplified geometry: a core with 1/3.9 of the magnetising inductance and a 2-layer, 2.4 mm foil winding. The metal still enters only through its resistivity. Every metal stays within ±1 dB of flat, and within 1 dB of every other metal, from 20 Hz to 20 kHz. Programme level is matched to within 0.01 dB on pink noise. No distortion mechanism is added.
+* **Bypass** is a true bypass: once its 40 ms crossfade settles, the output is the input bit for bit (float and double). It is the plugin's host bypass parameter, so the DAW's own bypass button and the panel switch are the same control. The engine keeps running underneath, so re-engaging is seamless: the output is identical to an instance that was never bypassed.
 
 (Formerly "wavRely 630". Plugin code `Salo`, manufacturer `Wvry`.)
 
@@ -16,20 +17,29 @@ cmake --build build --config Release --target Superalloy_VST3 verifySuperalloy
 build\Release\verifySuperalloy.exe
 ```
 
+Optional end-to-end check of the built plugin (loads `Superalloy.vst3` in JUCE's VST3 host):
+
+```bat
+cmake -S . -B build -DWAVRELY_BUILD_HOSTCHECK=ON
+cmake --build build --config Release --target hostcheckSuperalloy
+build\hostcheckSuperalloy_artefacts\Release\hostcheckSuperalloy.exe build\Superalloy_artefacts\Release\VST3\Superalloy.vst3
+```
+
 * The plugin is written to `build\Superalloy_artefacts\Release\VST3\Superalloy.vst3`. Copy it to `C:\Program Files\Common Files\VST3\`.
 * The generator `Visual Studio 18 2026` needs CMake 4.2 or newer.
 * `-DWAVRELY_JUCE_DIR` points at your local JUCE 9.0.6 checkout. Leave it out and JUCE 9.0.6 is fetched automatically.
 * AAX: add `-DWAVRELY_AAX_SDK=C:/SDKs/aax-sdk`. You then need PACE signing (wraptool) before Pro Tools will load it.
 * macOS: built and tested on GitHub Actions (`.github/workflows/macos.yml`): one universal VST3 (Intel + Apple Silicon, macOS 11+), tested on both architectures.
 * `verifySuperalloy` must print `RESULT: ALL TESTS PASSED`. Run it after every change to `Source/`.
+* `hostcheckSuperalloy` must print `RESULT: ALL CHECKS PASSED`. It drives the compiled plugin only through its exported parameters, the way a DAW does.
 * Optional tools: `-DWAVRELY_BUILD_MEASURE=ON` builds `measureSuperalloy` (frequency response) and `analyzeSuperalloy` (THD, IMD, level, step, programme null); both take `--color`. `tools/plotAnalysis.py` draws the graphs.
 
 ## What is in the signal path
 
 ```
-DC-free drive (0.01 Hz) → Rp ─┬─ Rs+Rp ─┬─ Rs ─ RL(10 kΩ) → skin shelf → static makeup → CONTOUR
-                             Lm1        Lm2                                              Subtle: nothing
-                       (T1 84% Ni core)  (T2 84% Ni core)                                Color: per-metal linear contour
+DC-free drive (0.01 Hz) → Rp ─┬─ Rs+Rp ─┬─ Rs ─ RL(10 kΩ) → skin shelf → static makeup → CONTOUR ─→ BYPASS
+                             Lm1        Lm2                                              Subtle: nothing   Off: processed
+                       (T1 84% Ni core)  (T2 84% Ni core)                                Color: contour    On:  input, untouched
 ```
 
 In Subtle the metal changes only the winding resistance (∝ ρ) and the skin knee (∝ ρ).
@@ -57,6 +67,17 @@ Color = the Subtle engine (unchanged, nonlinear), followed by a linear contour e
 
 Every metal's contour runs continuously on the engine output, so a metal change or a Subtle ↔ Color change is a 40 ms equal-gain crossfade between signals that are already settled.
 
+### Bypass
+
+| Property | Behaviour |
+|---|---|
+| Bypass On, settled | output = input, bit for bit, in float and double. Nothing is added: no gain, no DC block, no dither. |
+| Engage / release | 40 ms linear crossfade between the processed and the dry signal. Both are present throughout, so there is no click (measured: the largest sample step inside either fade is below the programme's own largest step). |
+| While bypassed | The engine, all 15 contours and the shadow cores keep running on the input. Metal and Contour can be changed while bypassed. When bypass is released, the output is identical to a channel that was never bypassed (difference exactly 0). |
+| DAW bypass | `getBypassParameter()` returns the Bypass parameter, so VST3 hosts see it as the `kIsBypass` parameter and AAX maps its bypass to it. The DAW's bypass and the panel switch move together and are automatable. If a host calls `processBlockBypassed`, the same crossfade to the dry signal is used. |
+| Recall | Saved in the session state. A session saved bypassed reopens bypassed from its first sample. |
+| Latency | 0 samples, bypassed or not, so bypassing never shifts timing. |
+
 ### What each metal does in Color (352.8 kHz, −18 dBFS, dB re input)
 
 | Metal | 20 Hz | 5 kHz | 20 kHz | Character |
@@ -77,10 +98,11 @@ The composite targets a 15 MHz bandwidth (Jensen class), with 93 µH leakage and
 
 ## Verification (this build, Linux, same sources)
 
-* **verifySuperalloy:** ALL TESTS PASSED (42 checks: sections A–K Subtle, section L Color). Report: `reports/verifySuperalloy_report.txt`.
+* **verifySuperalloy:** ALL TESTS PASSED (47 checks: sections A–K Subtle, section L Color, section M Bypass). Report: `reports/verifySuperalloy_report.txt`.
+* **hostcheckSuperalloy:** ALL CHECKS PASSED (31 checks; the built VST3 loaded in a VST3 host at 48 kHz float, 352.8 kHz float and 352.8 kHz double). Report: `reports/hostcheckSuperalloy_report.txt`.
 * **pluginval:** strictness 10 at 44.1 / 48 / 96 / 192 / 352.8 kHz, block sizes 1 / 64 / 512 / 4096. Result: SUCCESS.
 * **Steinberg VST3 validator:** 47 passed, 0 failed.
-* **macOS:** GitHub Actions builds the universal VST3 and runs verifySuperalloy + pluginval on Apple Silicon and on Intel hardware.
+* **macOS:** GitHub Actions builds the universal VST3 and runs verifySuperalloy, hostcheckSuperalloy and pluginval on Apple Silicon and on Intel hardware.
 
 | Check | Result | Limit |
 |---|---|---|
@@ -97,6 +119,12 @@ The composite targets a 15 MHz bandwidth (Jensen class), with 93 µH leakage and
 | Color: engine-measured vs analytic response (−40 dBFS) | 0.0006 dB | 0.005 dB |
 | Color: Subtle → Color switch vs a continuously running Color channel | exact (−3000 dB) | −120 dB |
 | Color: metal switch in Color | −73 dB (first 250 ms), −128 dB after | −60 / −90 dB |
+| Bypass: settled output vs input (incl. metal + contour changes while bypassed) | exactly 0 | 0 |
+| Bypass: re-engaged output vs a channel never bypassed | exactly 0 | 0 |
+| Bypass: largest sample step in the 40 ms fades | 0.0425 (programme: 0.0488) | ≤ programme |
+| Host: hosted VST3, bypass On vs input (48 kHz float, 352.8 kHz float + double) | exactly 0 | 0 |
+| Host: Metal and Contour reach the DSP (René 41 / Color residual vs input) | −7.4 dB (48 kHz), −11.0 dB (352.8 kHz) | > −30 dB |
+| Host: state recall of Metal, Contour, Bypass | René 41 / Color / On | exact |
 | HF purity at 44.1 kHz, 19 kHz 0 dBFS | 6e-7 % THD+N | 1e-4 % |
 | CPU | rev 6.1 + 15–25 % (same machine, same run) | — |
 
@@ -124,6 +152,7 @@ At 100 Hz, 0 dBFS: copper 0.0008% · Inconel 718 0.042%. At 1 kHz every metal is
 5. **The 15 entries still behave as about seven groups.** Inconel 625 and René 41 are electrically identical, and silver/copper/gold differ only slightly, in both positions.
 6. **CMSX-4 is not on the menu.** No sourced room-temperature resistivity was found.
 7. **Monel 400 is modelled non-magnetic** (owner decision).
+8. **How loud the effect is when you hit Bypass depends on the setting, by design.** Measured as the difference between processed and dry on pink noise: Subtle copper −60 dB, Subtle René 41 −26 dB, Color copper −32 dB, Color René 41 −15 dB. Subtle copper sits below most listeners' threshold in a bypass A/B; Color and the superalloys are clearly audible. The superconductor (−75 dB) is the 0 Ω reference and is meant to be nearly transparent.
 
 ## Files
 
@@ -134,11 +163,12 @@ At 100 Hz, 0 dBFS: copper 0.0008% · Inconel 718 0.042%. At 1 kHz every metal is
 | `Source/TransformerEngine.*` | Nonlinear two-core simulation (2×2 Newton, trapezoidal) |
 | `Source/SkinShelf.h` | Exact-skin-effect shelf fit |
 | `Source/ColorContour.h` | Color physics (core ÷3.9, Dowell foil winding), contour fit, Color stage |
-| `Source/Channel630.h` | DC block, shadow cores, 40 ms seamless switches, Contour |
-| `Source/Plugin*.{h,cpp}`, `Source/InconelTexture.h` | JUCE wrapper, Metal dropdown, Contour switch, procedural GUI |
+| `Source/Channel630.h` | DC block, shadow cores, 40 ms seamless switches, Contour, true bypass |
+| `Source/Plugin*.{h,cpp}`, `Source/InconelTexture.h` | JUCE wrapper, Metal dropdown, Contour and Bypass switches, procedural GUI |
 | `tools/verifySuperalloy.cpp` | Verification harness (`--calibrate` re-derives u_r) |
 | `tools/measureSuperalloy.cpp`, `tools/analyzeSuperalloy.cpp`, `tools/plotAnalysis.py` | Analyser suite and graphs (`reports/analysis`, `reports/analysis_color`) |
 | `tools/design.py`, `tools/skinfit.py` | Parasitic, L_m and skin-ladder solvers |
+| `tools/hostcheckSuperalloy.cpp` | End-to-end test of the built VST3 in a VST3 host (`-DWAVRELY_BUILD_HOSTCHECK=ON`) |
 | `tools/snapshotSuperalloy.cpp` | Off-screen GUI render (`-DWAVRELY_BUILD_SNAPSHOT=ON`) |
 | `.github/workflows/macos.yml` | macOS universal build and tests |
 

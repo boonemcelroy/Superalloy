@@ -31,6 +31,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout SuperalloyAudioProcessor::cr
                                                               "Metal", metalNames(), kDefaultMetal));
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { "contour", 2 },
                                                               "Contour", contourNames(), 0));
+    layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { "bypass", 3 },
+                                                            "Bypass", false));
     return layout;
 }
 
@@ -42,6 +44,9 @@ SuperalloyAudioProcessor::SuperalloyAudioProcessor()
 {
     metalParam = apvts.getRawParameterValue ("metal");
     contourParam = apvts.getRawParameterValue ("contour");
+    bypassRaw = apvts.getRawParameterValue ("bypass");
+    bypassParameter = dynamic_cast<juce::AudioParameterBool*> (apvts.getParameter ("bypass"));
+    jassert (bypassParameter != nullptr);
 }
 
 //==============================================================================
@@ -65,9 +70,10 @@ void SuperalloyAudioProcessor::prepareToPlay (double sampleRate, int)
     bank = bankForRate (sampleRate);
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
     const bool color = contourParam->load() >= 0.5f;
+    const bool bypass = bypassRaw->load() >= 0.5f;
     channels.assign ((size_t) juce::jmax (1, getTotalNumOutputChannels()), Channel630 {});
     for (auto& c : channels)
-        c.prepare (*bank, metal, color);
+        c.prepare (*bank, metal, color, bypass);
     setLatencySamples (0);
 }
 
@@ -89,7 +95,7 @@ bool SuperalloyAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 //==============================================================================
 template <typename Sample>
-void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer)
+void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer, bool forceBypass)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -97,12 +103,14 @@ void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer
     const int n = buffer.getNumSamples();
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
     const bool color = contourParam->load() >= 0.5f;
+    const bool bypass = forceBypass || bypassRaw->load() >= 0.5f;
 
     for (int ch = 0; ch < numCh; ++ch)
     {
         auto& c = channels[(size_t) ch];
         c.selectMetal (metal);                      // seamless: 40 ms crossfade inside
         c.selectColor (color);                      // seamless: 40 ms crossfade inside
+        c.selectBypass (bypass);                    // true bypass, seamless: 40 ms crossfade inside
         Sample* d = buffer.getWritePointer (ch);
         for (int i = 0; i < n; ++i)
             d[i] = (Sample) c.process ((double) d[i]);
@@ -114,12 +122,22 @@ void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer
 
 void SuperalloyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
-    processSamples (buffer);
+    processSamples (buffer, false);
 }
 
 void SuperalloyAudioProcessor::processBlock (juce::AudioBuffer<double>& buffer, juce::MidiBuffer&)
 {
-    processSamples (buffer);
+    processSamples (buffer, false);
+}
+
+void SuperalloyAudioProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+{
+    processSamples (buffer, true);
+}
+
+void SuperalloyAudioProcessor::processBlockBypassed (juce::AudioBuffer<double>& buffer, juce::MidiBuffer&)
+{
+    processSamples (buffer, true);
 }
 
 //==============================================================================

@@ -2,11 +2,14 @@
 #  Superalloy — macOS VST3 build (Intel + Apple Silicon, one universal binary)
 #
 #  build        macos-15 (Apple Silicon): universal arm64 + x86_64 VST3,
-#               verifySuperalloy (native arm64), pluginval strictness 10,
-#               ad-hoc signature, or Developer ID signing + notarisation when
-#               the secrets below exist.
-#  test-intel   macos-15-intel: runs verifySuperalloy and pluginval on the
-#               x86_64 slice of the exact same binary, on real Intel hardware.
+#               verifySuperalloy (native arm64), ad-hoc signature, or Developer
+#               ID signing + notarisation when the secrets below exist, then
+#               hostcheckSuperalloy (loads the signed VST3 in a JUCE VST3 host:
+#               hookup, audible effect, true bypass, recall) and pluginval
+#               strictness 10.
+#  test-intel   macos-15-intel: runs verifySuperalloy, hostcheckSuperalloy and
+#               pluginval on the x86_64 slice of the exact same binary, on real
+#               Intel hardware.
 #  release      on a tag v*: publishes the zip as a GitHub Release.
 #
 #  Optional secrets (all six needed for Developer ID signing + notarisation):
@@ -60,9 +63,10 @@ jobs:
           -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           -DWAVRELY_BUILD_VERIFY=ON
+          -DWAVRELY_BUILD_HOSTCHECK=ON
 
       - name: Build
-        run: cmake --build build --config Release --target ${PLUGIN}_VST3 verifySuperalloy -j "$(sysctl -n hw.ncpu)"
+        run: cmake --build build --config Release --target ${PLUGIN}_VST3 verifySuperalloy hostcheckSuperalloy -j "$(sysctl -n hw.ncpu)"
 
       - name: Locate artefacts and check both architectures
         run: |
@@ -70,9 +74,13 @@ jobs:
           test -d "$VST3"
           BIN="$VST3/Contents/MacOS/${PLUGIN}"
           echo "VST3 slices:   $(lipo -archs "$BIN")"
+          cp build/hostcheckSuperalloy_artefacts/Release/hostcheckSuperalloy build/hostcheckSuperalloy
           echo "verify slices: $(lipo -archs build/verifySuperalloy)"
+          echo "host slices:   $(lipo -archs build/hostcheckSuperalloy)"
           lipo "$BIN" -verify_arch arm64 x86_64
           lipo build/verifySuperalloy -verify_arch arm64 x86_64
+          lipo build/hostcheckSuperalloy -verify_arch arm64 x86_64
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$VST3/Contents/Info.plist"
           echo "VST3=$VST3" >> "$GITHUB_ENV"
 
       - name: verifySuperalloy (Apple Silicon, native arm64)
@@ -111,6 +119,11 @@ jobs:
             --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
           xcrun stapler staple "$VST3"
           xcrun stapler validate "$VST3"
+
+      - name: hostcheckSuperalloy (Apple Silicon, signed VST3 in a VST3 host)
+        run: |
+          arch -arm64 build/hostcheckSuperalloy "$VST3" | tee reports-ci/hostcheckSuperalloy_macos_arm64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" reports-ci/hostcheckSuperalloy_macos_arm64.txt
 
       - name: pluginval strictness 10 (Apple Silicon)
         run: |
@@ -151,7 +164,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: verify-binary
-          path: build/verifySuperalloy
+          path: |
+            build/verifySuperalloy
+            build/hostcheckSuperalloy
           if-no-files-found: error
 
   test-intel:
@@ -172,12 +187,17 @@ jobs:
           uname -m
           ditto -x -k Superalloy-macOS-universal.zip .
           echo "VST3=$PWD/Superalloy-macOS/Superalloy.vst3" >> "$GITHUB_ENV"
-          chmod +x verify/verifySuperalloy
+          chmod +x verify/verifySuperalloy verify/hostcheckSuperalloy
 
       - name: verifySuperalloy (Intel, native x86_64)
         run: |
           arch -x86_64 verify/verifySuperalloy | tee verifySuperalloy_macos_x86_64.txt
           grep -q "RESULT: ALL TESTS PASSED" verifySuperalloy_macos_x86_64.txt
+
+      - name: hostcheckSuperalloy (Intel, native x86_64)
+        run: |
+          arch -x86_64 verify/hostcheckSuperalloy "$VST3" | tee hostcheckSuperalloy_macos_x86_64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" hostcheckSuperalloy_macos_x86_64.txt
 
       - name: pluginval strictness 10 (Intel)
         run: |
@@ -192,6 +212,7 @@ jobs:
           name: intel-reports
           path: |
             verifySuperalloy_macos_x86_64.txt
+            hostcheckSuperalloy_macos_x86_64.txt
             pluginval_macos_x86_64.txt
 
   release:
@@ -208,4 +229,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" Superalloy-macOS-universal.zip \
             --repo "$GITHUB_REPOSITORY" --title "Superalloy $GITHUB_REF_NAME" \
-            --notes "Universal VST3 for macOS 11+ (Intel and Apple Silicon). Tested on both architectures with verifySuperalloy and pluginval strictness 10."
+            --notes "Universal VST3 for macOS 11+ (Intel and Apple Silicon). Tested on both architectures with verifySuperalloy, hostcheckSuperalloy and pluginval strictness 10."
