@@ -1,0 +1,139 @@
+Superalloy verification harness
+core u_r = 0.08578808142, flux knee = 1.098062 V*s, virtual turns ratio N = 4.5657, V(0 dBFS) = 17.37147 Vpk
+
+A. DESIGN TABLE (analog, small-signal)
+  metal                                             Rp ohm    Rs ohm   skin fk  makeup dB LF-3dB Hz   fit 44.1k  fit 352.8k
+  Superconductor (NbTi, 0 Ω reference)             0.0000    0.0000         0     0.0000    0.0000    0.00e+00    0.00e+00
+  Silver — Ohno Continuous Cast 7N                8.7011    8.9848     15335     0.0307    0.0378    4.08e-06    5.45e-06
+  Copper — Grade 1 6N OFC                         9.2000    9.5000     16214     0.0324    0.0400    3.85e-06    4.78e-06
+  Gold — pure                                    12.1387   12.5346     21393     0.0428    0.0527    2.90e-06    2.61e-06
+  Rhodium                                          23.5757   24.3445     41550     0.0829    0.1021    1.49e-06    4.95e-07
+  Iridium                                          26.8653   27.7414     47347     0.0943    0.1163    1.31e-06    3.28e-07
+  Platinum-Iridium 10 (kilogram-prototype alloy)  137.0679  141.5375    241569     0.4710    0.5759    2.60e-07    4.08e-08
+  Monel 400                                       290.5840  300.0596    512125     0.9698    1.1750    1.24e-07    2.16e-08
+  Haynes 188                                      553.7545  571.8117    975937     1.7635    2.1102    6.56e-08    2.78e-07
+  MP35N                                           564.7199  583.1347    995262     1.7951    2.1471    6.43e-08    1.30e-08
+  Waspaloy                                        668.8915  690.7032   1178854     2.0892    2.4893    5.42e-08    9.66e-09
+  Inconel 718                                     679.8570  702.0262   1198180     2.1196    2.5246    5.33e-08    5.49e-08
+  Hastelloy C-276                                 690.8224  713.3492   1217505     2.1499    2.5597    5.24e-08    9.36e-09
+  Inconel 625                                     707.2706  730.3337   1246494     2.1951    2.6121    5.12e-08    3.48e-08
+  René 41                                        707.2706  730.3337   1246494     2.1951    2.6121    5.12e-08    3.48e-08
+  [PASS] Omitted MHz parasitics are inaudible worst 3.24e-05 dB at 20000 Hz (Gold — pure); limit 1e-4 dB
+  [PASS] Copper composite HF bandwidth first -3 dB crossing 13.76 MHz incl. exaggerated skin (target 15 MHz +/-10%)
+  note: leakage/C group delay at 20 kHz = 18.5 ns (analytic, not simulated)
+
+B. LEVEL: 1 kHz, -20 dBFS, every metal, 44.1 kHz and 352.8 kHz
+  [PASS] Static makeup fs 44.1 kHz: worst |level error| = 0.000000 dB (limit 0.001)
+  [PASS] Static makeup fs 352.8 kHz: worst |level error| = 0.000000 dB (limit 0.001)
+
+C. RESPONSE vs COPPER, -20 dBFS sine, fs 352.8 kHz (dB; owner cap +/-0.1)
+  metal \ Hz                                           20     31.5       50      100      200      500     1000     2000     5000    10000    15000    20000
+  Superconductor (NbTi, 0 Ω reference)            0.0000   0.0000   0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Silver — Ohno Continuous Cast 7N               0.0000   0.0000   0.0000   0.0000   0.0000   0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0001
+  Copper — Grade 1 6N OFC                        0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000
+  Gold — pure                                   -0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0001   0.0001   0.0002
+  Rhodium                                         -0.0001  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0002   0.0003   0.0006
+  Iridium                                         -0.0001  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0002   0.0004   0.0007
+  Platinum-Iridium 10 (kilogram-prototype alloy)  -0.0032  -0.0013  -0.0005  -0.0001  -0.0000  -0.0000   0.0000   0.0000   0.0001   0.0002   0.0005   0.0009
+  Monel 400                                       -0.0133  -0.0055  -0.0022  -0.0006  -0.0001  -0.0000   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Haynes 188                                      -0.0427  -0.0178  -0.0072  -0.0018  -0.0004  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  MP35N                                           -0.0442  -0.0184  -0.0074  -0.0019  -0.0005  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Waspaloy                                        -0.0593  -0.0247  -0.0100  -0.0025  -0.0006  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Inconel 718                                     -0.0610  -0.0254  -0.0103  -0.0026  -0.0006  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Hastelloy C-276                                 -0.0627  -0.0261  -0.0105  -0.0027  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Inconel 625                                     -0.0653  -0.0272  -0.0110  -0.0028  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  René 41                                        -0.0653  -0.0272  -0.0110  -0.0028  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  [PASS] Shape cap 20 Hz-20 kHz worst |deviation from copper| = 0.0653 dB
+
+C. RESPONSE vs COPPER, -20 dBFS sine, fs 44.1 kHz (dB; owner cap +/-0.1)
+  metal \ Hz                                           20     31.5       50      100      200      500     1000     2000     5000    10000    15000    20000
+  Superconductor (NbTi, 0 Ω reference)            0.0000   0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Silver — Ohno Continuous Cast 7N               0.0000   0.0000   0.0000   0.0000   0.0000   0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0001
+  Copper — Grade 1 6N OFC                        0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000   0.0000
+  Gold — pure                                   -0.0000  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0001   0.0001   0.0002
+  Rhodium                                         -0.0001  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0002   0.0003   0.0006
+  Iridium                                         -0.0001  -0.0000  -0.0000  -0.0000  -0.0000  -0.0000   0.0000   0.0000   0.0000   0.0002   0.0004   0.0006
+  Platinum-Iridium 10 (kilogram-prototype alloy)  -0.0032  -0.0013  -0.0005  -0.0001  -0.0000  -0.0000   0.0000   0.0000   0.0001   0.0002   0.0005   0.0009
+  Monel 400                                       -0.0133  -0.0055  -0.0022  -0.0006  -0.0001  -0.0000   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Haynes 188                                      -0.0427  -0.0178  -0.0072  -0.0018  -0.0004  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  MP35N                                           -0.0442  -0.0184  -0.0074  -0.0019  -0.0005  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Waspaloy                                        -0.0593  -0.0247  -0.0100  -0.0025  -0.0006  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Inconel 718                                     -0.0610  -0.0254  -0.0103  -0.0026  -0.0006  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Hastelloy C-276                                 -0.0627  -0.0261  -0.0105  -0.0027  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  Inconel 625                                     -0.0653  -0.0272  -0.0110  -0.0028  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  René 41                                        -0.0653  -0.0272  -0.0110  -0.0028  -0.0007  -0.0001   0.0000   0.0000   0.0001   0.0003   0.0006   0.0010
+  [PASS] Shape cap 20 Hz-20 kHz worst |deviation from copper| = 0.0653 dB
+
+D. ENGINE vs EXACT CIRCUIT EQUATIONS (-40 dBFS, 1-20 kHz, every metal, both rates)
+  [PASS] Engine + skin shelf match the exact Bessel/circuit solution worst mismatch 7.11e-06 dB (limit 1e-4)
+
+E. DISTORTION (THD %, harmonics 2-10), fs 352.8 kHz
+  [PASS] Calibration: 20 Hz, -20 dBFS (+4 dBu) copper 0.00200 % (target 0.002 % +/-5%)
+  metal \ (Hz @ dBFS)                               20@-20    50@-20   100@-20  1000@-20    20@-6     50@-6    100@-6   1000@-6     20@0      50@0     100@0    1000@0  
+  Superconductor (NbTi, 0 Ω reference)            0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000   0.00000
+  Silver — Ohno Continuous Cast 7N               0.00189   0.00032   0.00008   0.00000   0.00725   0.00142   0.00038   0.00000   0.01059   0.00247   0.00071   0.00001
+  Copper — Grade 1 6N OFC                        0.00200   0.00033   0.00008   0.00000   0.00766   0.00150   0.00040   0.00000   0.01120   0.00261   0.00075   0.00001
+  Gold — pure                                    0.00264   0.00044   0.00011   0.00000   0.01009   0.00197   0.00053   0.00001   0.01476   0.00344   0.00098   0.00001
+  Rhodium                                          0.00509   0.00085   0.00022   0.00000   0.01951   0.00381   0.00102   0.00001   0.02855   0.00665   0.00190   0.00002
+  Iridium                                          0.00579   0.00097   0.00024   0.00000   0.02220   0.00434   0.00116   0.00001   0.03249   0.00757   0.00216   0.00002
+  Platinum-Iridium 10 (kilogram-prototype alloy)   0.02805   0.00468   0.00118   0.00001   0.10829   0.02105   0.00563   0.00006   0.15963   0.03688   0.01050   0.00012
+  Monel 400                                        0.05555   0.00926   0.00235   0.00002   0.21635   0.04183   0.01116   0.00012   0.32193   0.07360   0.02088   0.00023
+  Haynes 188                                       0.09508   0.01589   0.00403   0.00004   0.37547   0.07214   0.01919   0.00020   0.56677   0.12772   0.03602   0.00040
+  MP35N                                            0.09655   0.01613   0.00409   0.00004   0.38149   0.07329   0.01950   0.00021   0.57618   0.12977   0.03660   0.00041
+  Waspaloy                                         0.10995   0.01840   0.00466   0.00005   0.43659   0.08374   0.02226   0.00024   0.66279   0.14859   0.04183   0.00047
+  Inconel 718                                      0.11130   0.01863   0.00472   0.00005   0.44218   0.08480   0.02254   0.00024   0.67163   0.15050   0.04236   0.00047
+  Hastelloy C-276                                  0.11264   0.01886   0.00478   0.00005   0.44773   0.08585   0.02282   0.00024   0.68041   0.15240   0.04289   0.00048
+  Inconel 625                                      0.11463   0.01920   0.00487   0.00005   0.45598   0.08741   0.02323   0.00025   0.69349   0.15522   0.04367   0.00049
+  René 41                                         0.11463   0.01920   0.00487   0.00005   0.45598   0.08741   0.02323   0.00025   0.69349   0.15522   0.04367   0.00049
+
+F. CLIP POINT (owner ruling: core knee at +18 dBFS, 20 Hz)
+  dBFS                -12         -6          0          6         12         18         24
+  Copper — G    0.0045%    0.0077%    0.0112%    0.0129%    0.0109%    0.0056%    0.1726%
+    peak u         0.0316     0.0631     0.1259     0.2512     0.5011     0.9997     1.9943
+  [PASS] Knee placement peak core u at +18 dBFS = 0.9997 (expect 1.00 +/-3%)
+  [PASS] 0 dBFS stays far below knee peak core u at 0 dBFS = 0.1259 (saturation term 9.95e-07)
+  Monel 400       0.1267%    0.2164%    0.3219%    0.3812%    0.3316%    0.1861%    3.3958%
+    peak u         0.0308     0.0615     0.1227     0.2449     0.4888     0.9750     1.9387
+  René 41        0.2636%    0.4560%    0.6935%    0.8487%    0.7677%    0.4695%    4.7629%
+    peak u         0.0298     0.0594     0.1187     0.2372     0.4738     0.9453     1.8748
+
+G. BROADBAND PROGRAMME LEVEL: pink noise 20 Hz-20 kHz (2nd-order), 6 s, fs 352.8 kHz
+  Superconductor (NbTi, 0 Ω reference)          +0.00000 dB re input
+  Silver — Ohno Continuous Cast 7N             -0.00011 dB re input
+  Copper — Grade 1 6N OFC                      -0.00010 dB re input
+  Gold — pure                                  -0.00008 dB re input
+  Rhodium                                        -0.00004 dB re input
+  Iridium                                        -0.00004 dB re input
+  Platinum-Iridium 10 (kilogram-prototype alloy) -0.00018 dB re input
+  Monel 400                                      -0.00081 dB re input
+  Haynes 188                                     -0.00269 dB re input
+  MP35N                                          -0.00278 dB re input
+  Waspaloy                                       -0.00375 dB re input
+  Inconel 718                                    -0.00386 dB re input
+  Hastelloy C-276                                -0.00397 dB re input
+  Inconel 625                                    -0.00413 dB re input
+  René 41                                       -0.00413 dB re input
+  [PASS] Programme level (R1) worst |metal - copper| = 0.00403 dB (limit 0.01)
+  [PASS] Superconductor = pristine environment null residual -204.3 dB re signal (limit -120)
+
+H. SEAMLESS SWITCH: Copper -> Rene 41 at t = 1 s on pink noise (40 ms equal-gain fade)
+  [PASS] Converges to a continuously running Rene 41 after fade 0-250 ms: -93.3 dB, 250 ms-3 s: -137.3 dB re signal (limit -60 / -90)
+  [PASS] No click max sample step in switch window 0.04993 vs programme max 0.06644
+
+I. ALIASING / HF PURITY at 44.1 kHz (Rene 41, 0 dBFS)
+  [PASS] HF purity 10000 Hz: THD+N (incl. aliases) 3.40e-06 % (limit 1e-4 %)
+  [PASS] HF purity 15000 Hz: THD+N (incl. aliases) 9.43e-07 % (limit 1e-4 %)
+  [PASS] HF purity 19000 Hz: THD+N (incl. aliases) 5.79e-07 % (limit 1e-4 %)
+
+J. SILENCE, IMPULSE, LATENCY, STABILITY
+  [PASS] Digital silence in -> exact zero out 
+  [PASS] Zero latency, no ringing Superconductor (NbTi, 0 Ω reference): peak at sample 0, value 0.999999, max 2nd-difference of tail n>=64 2.89e-18 (limit 1e-9)
+  [PASS] Zero latency, no ringing Copper — Grade 1 6N OFC: peak at sample 0, value 0.999950, max 2nd-difference of tail n>=64 2.69e-16 (limit 1e-9)
+  [PASS] Zero latency, no ringing René 41: peak at sample 0, value 0.999787, max 2nd-difference of tail n>=64 5.56e-11 (limit 1e-9)
+  [PASS] 60 s hot programme stable max Newton iterations 3
+
+K. CPU (single core, this machine)
+  fs 44.1 kHz: 284.1 ns/sample/channel, stereo uses 2.5 % of one core (x2 during a fade)
+  fs 352.8 kHz: 236.3 ns/sample/channel, stereo uses 16.7 % of one core (x2 during a fade)
+
+RESULT: ALL TESTS PASSED (0 failures)

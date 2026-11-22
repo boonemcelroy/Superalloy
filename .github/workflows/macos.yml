@@ -1,0 +1,211 @@
+# ==============================================================================
+#  Superalloy — macOS VST3 build (Intel + Apple Silicon, one universal binary)
+#
+#  build        macos-15 (Apple Silicon): universal arm64 + x86_64 VST3,
+#               verifySuperalloy (native arm64), pluginval strictness 10,
+#               ad-hoc signature, or Developer ID signing + notarisation when
+#               the secrets below exist.
+#  test-intel   macos-15-intel: runs verifySuperalloy and pluginval on the
+#               x86_64 slice of the exact same binary, on real Intel hardware.
+#  release      on a tag v*: publishes the zip as a GitHub Release.
+#
+#  Optional secrets (all six needed for Developer ID signing + notarisation):
+#    MACOS_CERT_P12_BASE64   base64 of your "Developer ID Application" .p12
+#    MACOS_CERT_PASSWORD     password of that .p12
+#    MACOS_SIGN_IDENTITY     e.g. "Developer ID Application: Name (TEAMID)"
+#    APPLE_ID                Apple ID e-mail
+#    APPLE_TEAM_ID           10-character team ID
+#    APPLE_APP_PASSWORD      app-specific password for notarytool
+# ==============================================================================
+name: macOS VST3
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PLUGIN: Superalloy
+  PLUGINVAL_URL: https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+      MACOS_CERT_PASSWORD:   ${{ secrets.MACOS_CERT_PASSWORD }}
+      MACOS_SIGN_IDENTITY:   ${{ secrets.MACOS_SIGN_IDENTITY }}
+      APPLE_ID:              ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID:         ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD:    ${{ secrets.APPLE_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          cmake --version
+
+      - name: Configure (universal arm64 + x86_64, macOS 11+)
+        run: >
+          cmake -S . -B build -G "Unix Makefiles"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          -DWAVRELY_BUILD_VERIFY=ON
+
+      - name: Build
+        run: cmake --build build --config Release --target ${PLUGIN}_VST3 verifySuperalloy -j "$(sysctl -n hw.ncpu)"
+
+      - name: Locate artefacts and check both architectures
+        run: |
+          VST3="build/${PLUGIN}_artefacts/Release/VST3/${PLUGIN}.vst3"
+          test -d "$VST3"
+          BIN="$VST3/Contents/MacOS/${PLUGIN}"
+          echo "VST3 slices:   $(lipo -archs "$BIN")"
+          echo "verify slices: $(lipo -archs build/verifySuperalloy)"
+          lipo "$BIN" -verify_arch arm64 x86_64
+          lipo build/verifySuperalloy -verify_arch arm64 x86_64
+          echo "VST3=$VST3" >> "$GITHUB_ENV"
+
+      - name: verifySuperalloy (Apple Silicon, native arm64)
+        run: |
+          mkdir -p reports-ci
+          arch -arm64 build/verifySuperalloy | tee reports-ci/verifySuperalloy_macos_arm64.txt
+          grep -q "RESULT: ALL TESTS PASSED" reports-ci/verifySuperalloy_macos_arm64.txt
+
+      - name: Ad-hoc sign (no Developer ID secrets)
+        if: env.MACOS_CERT_P12_BASE64 == ''
+        run: |
+          codesign --force --deep --sign - "$VST3"
+          codesign --verify --deep --strict --verbose=2 "$VST3"
+
+      - name: Developer ID sign
+        if: env.MACOS_CERT_P12_BASE64 != ''
+        run: |
+          KC="$RUNNER_TEMP/sign.keychain-db"
+          KCPW="$(uuidgen)"
+          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KCPW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCPW" "$KC"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCPW" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          codesign --force --deep --options runtime --timestamp --sign "$MACOS_SIGN_IDENTITY" "$VST3"
+          codesign --verify --deep --strict --verbose=2 "$VST3"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Notarise and staple
+        if: env.MACOS_CERT_P12_BASE64 != '' && env.APPLE_APP_PASSWORD != ''
+        run: |
+          ditto -c -k --keepParent "$VST3" "$RUNNER_TEMP/notarise.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "$VST3"
+          xcrun stapler validate "$VST3"
+
+      - name: pluginval strictness 10 (Apple Silicon)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/pluginval.zip" "$PLUGINVAL_URL"
+          ditto -x -k "$RUNNER_TEMP/pluginval.zip" "$RUNNER_TEMP/pluginval"
+          PV="$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval"
+          arch -arm64 "$PV" --strictness-level 10 --validate-in-process --validate "$VST3" \
+            | tee reports-ci/pluginval_macos_arm64.txt
+          grep -q "SUCCESS" reports-ci/pluginval_macos_arm64.txt
+
+      - name: Package
+        run: |
+          STAGE="$RUNNER_TEMP/${PLUGIN}-macOS"
+          mkdir -p "$STAGE"
+          ditto "$VST3" "$STAGE/${PLUGIN}.vst3"
+          cp reports-ci/*.txt "$STAGE/"
+          if [ -n "$MACOS_CERT_P12_BASE64" ]; then SIGNED="Developer ID signed and notarised."; else SIGNED="Ad-hoc signed (not notarised)."; fi
+          cat > "$STAGE/INSTALL.txt" <<EOF
+          Superalloy VST3 for macOS — universal binary (Intel x86_64 + Apple Silicon arm64), macOS 11 or newer.
+          ${SIGNED}
+
+          Install: copy Superalloy.vst3 to /Library/Audio/Plug-Ins/VST3/
+                   (or ~/Library/Audio/Plug-Ins/VST3/ for your user only), then rescan in your DAW.
+
+          If this build is ad-hoc signed, macOS blocks it after a browser download. Clear the
+          quarantine flag once, in Terminal:
+            xattr -dr com.apple.quarantine /Library/Audio/Plug-Ins/VST3/Superalloy.vst3
+          EOF
+          ditto -c -k --keepParent "$STAGE" "$RUNNER_TEMP/${PLUGIN}-macOS-universal.zip"
+          cp "$RUNNER_TEMP/${PLUGIN}-macOS-universal.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+          path: Superalloy-macOS-universal.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verify-binary
+          path: build/verifySuperalloy
+          if-no-files-found: error
+
+  test-intel:
+    needs: build
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+      - uses: actions/download-artifact@v4
+        with:
+          name: verify-binary
+          path: verify
+
+      - name: Unpack
+        run: |
+          uname -m
+          ditto -x -k Superalloy-macOS-universal.zip .
+          echo "VST3=$PWD/Superalloy-macOS/Superalloy.vst3" >> "$GITHUB_ENV"
+          chmod +x verify/verifySuperalloy
+
+      - name: verifySuperalloy (Intel, native x86_64)
+        run: |
+          arch -x86_64 verify/verifySuperalloy | tee verifySuperalloy_macos_x86_64.txt
+          grep -q "RESULT: ALL TESTS PASSED" verifySuperalloy_macos_x86_64.txt
+
+      - name: pluginval strictness 10 (Intel)
+        run: |
+          curl -fsSL -o pluginval.zip "$PLUGINVAL_URL"
+          ditto -x -k pluginval.zip pluginval
+          arch -x86_64 pluginval/pluginval.app/Contents/MacOS/pluginval \
+            --strictness-level 10 --validate-in-process --validate "$VST3" | tee pluginval_macos_x86_64.txt
+          grep -q "SUCCESS" pluginval_macos_x86_64.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: intel-reports
+          path: |
+            verifySuperalloy_macos_x86_64.txt
+            pluginval_macos_x86_64.txt
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ build, test-intel ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" Superalloy-macOS-universal.zip \
+            --repo "$GITHUB_REPOSITORY" --title "Superalloy $GITHUB_REF_NAME" \
+            --notes "Universal VST3 for macOS 11+ (Intel and Apple Silicon). Tested on both architectures with verifySuperalloy and pluginval strictness 10."

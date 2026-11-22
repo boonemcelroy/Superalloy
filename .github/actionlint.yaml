@@ -1,0 +1,4 @@
+self-hosted-runner:
+  # GitHub-hosted Intel macOS runner (official since Sept 2025), newer than this actionlint release
+  labels:
+    - macos-15-intel
