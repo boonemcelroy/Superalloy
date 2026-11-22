@@ -411,7 +411,9 @@ namespace superalloy
         }
 
     private:
-        alignas (32) double b0[kS][kM] {}, b1[kS][kM] {}, a1[kS][kM] {}, st[kS][kM] {};
+        // No alignas: a row is 15 doubles (120 bytes), so a 32-byte alignment only ever aligned
+        // row 0 of each array. It bought no speed and forced MSVC to pad between arrays (C4324).
+        double b0[kS][kM] {}, b1[kS][kM] {}, a1[kS][kM] {}, st[kS][kM] {};
         double gain[kM] {};
         bool target = false;
         double mix = 0.0, fadeFrom = 0.0;

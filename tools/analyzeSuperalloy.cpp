@@ -39,6 +39,8 @@
 #include <thread>
 #include <vector>
 
+#include "ConsoleUtf8.h"
+
 namespace
 {
     constexpr double kPi = 3.14159265358979323846;
@@ -361,6 +363,7 @@ namespace
 
 int main (int argc, char** argv)
 {
+    superalloy::tools::useUtf8Console();
     juce::ScopedJuceInitialiser_GUI init;
     bool color = false;
     {

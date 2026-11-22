@@ -24,6 +24,8 @@
 #include <random>
 #include <vector>
 
+#include "ConsoleUtf8.h"
+
 namespace
 {
     int failures = 0;
@@ -222,6 +224,7 @@ namespace
 
 int main (int argc, char** argv)
 {
+    superalloy::tools::useUtf8Console();
     juce::ScopedJuceInitialiser_GUI init;
     if (argc < 2) { std::printf ("usage: hostcheckSuperalloy <Superalloy.vst3>\n"); return 2; }
     const juce::String path = juce::File (juce::String (argv[1])).getFullPathName();

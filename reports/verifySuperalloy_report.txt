@@ -205,7 +205,7 @@ M. BYPASS (true bypass: settled output == input bit for bit; engine keeps runnin
   [PASS] Effect is audible when engaged every metal changes the signal when engaged (residual > -120 dB; Color Rene 41 > -30 dB)
 
 K. CPU (single core, this machine)
-  fs 44.1 kHz: 245.4 ns/sample/channel, stereo uses 2.2 % of one core (x2 during a fade)
-  fs 352.8 kHz: 243.5 ns/sample/channel, stereo uses 17.2 % of one core (x2 during a fade)
+  fs 44.1 kHz: 244.1 ns/sample/channel, stereo uses 2.2 % of one core (x2 during a fade)
+  fs 352.8 kHz: 214.8 ns/sample/channel, stereo uses 15.2 % of one core (x2 during a fade)
 
 RESULT: ALL TESTS PASSED (0 failures)

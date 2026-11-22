@@ -6,7 +6,7 @@
 #  fetches JUCE 9.0.6 from GitHub.
 # ==============================================================================
 cmake_minimum_required (VERSION 3.22)
-project (Superalloy VERSION 6.3.0 LANGUAGES C CXX)
+project (Superalloy VERSION 6.3.1 LANGUAGES C CXX)
 
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,7 +44,7 @@ juce_add_plugin (Superalloy
     PLUGIN_MANUFACTURER_CODE   Wvry
     PLUGIN_CODE                Salo
     PRODUCT_NAME               "Superalloy"
-    VERSION                    6.3.0
+    VERSION                    6.3.1
     FORMATS                    ${WAVRELY_FORMATS}
     IS_SYNTH                   FALSE
     NEEDS_MIDI_INPUT           FALSE
@@ -65,8 +65,7 @@ target_include_directories (Superalloy PRIVATE Source)
 target_compile_definitions (Superalloy PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
-    JUCE_VST3_CAN_REPLACE_VST2=0
-    JUCE_DISPLAY_SPLASH_SCREEN=0)
+    JUCE_VST3_CAN_REPLACE_VST2=0)   # JUCE 9 has no splash screen: JUCE_DISPLAY_SPLASH_SCREEN is gone
 
 target_link_libraries (Superalloy
     PRIVATE
@@ -104,6 +103,11 @@ if (WAVRELY_BUILD_SNAPSHOT)
     target_include_directories (snapshotSuperalloy PRIVATE Source)
     target_compile_definitions (snapshotSuperalloy PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JucePlugin_Build_Standalone=0)
     target_link_libraries (snapshotSuperalloy PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_gui_basics)
+    if (MSVC)
+        target_compile_options (snapshotSuperalloy PRIVATE /fp:precise /utf-8)
+    else ()
+        target_compile_options (snapshotSuperalloy PRIVATE -fno-fast-math -ffp-contract=off)
+    endif ()
 endif ()
 
 # ------------------------------------------------------- frequency response

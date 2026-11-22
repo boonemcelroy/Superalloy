@@ -31,6 +31,7 @@ build\hostcheckSuperalloy_artefacts\Release\hostcheckSuperalloy.exe build\Supera
 * AAX: add `-DWAVRELY_AAX_SDK=C:/SDKs/aax-sdk`. You then need PACE signing (wraptool) before Pro Tools will load it.
 * macOS: built and tested on GitHub Actions (`.github/workflows/macos.yml`): one universal VST3 (Intel + Apple Silicon, macOS 11+), tested on both architectures.
 * `verifySuperalloy` must print `RESULT: ALL TESTS PASSED`. Run it after every change to `Source/`.
+* The tools switch the Windows console to UTF-8 at start-up, so metal names print correctly (René 41, Copper — Grade 1). The plugin itself is compiled with `/utf-8`, so its GUI is unaffected either way.
 * `hostcheckSuperalloy` must print `RESULT: ALL CHECKS PASSED`. It drives the compiled plugin only through its exported parameters, the way a DAW does.
 * Optional tools: `-DWAVRELY_BUILD_MEASURE=ON` builds `measureSuperalloy` (frequency response) and `analyzeSuperalloy` (THD, IMD, level, step, programme null); both take `--color`. `tools/plotAnalysis.py` draws the graphs.
 

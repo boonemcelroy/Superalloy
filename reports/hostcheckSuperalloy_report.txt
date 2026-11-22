@@ -1,5 +1,5 @@
 Superalloy host check: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
-  [PASS] VST3 found and described  Superalloy 6.3.0 by wavRely Mastering Systems
+  [PASS] VST3 found and described  Superalloy 6.3.1 by wavRely Mastering Systems
 
 48.0 kHz, block 480, single precision
   [PASS] Exports Metal, Contour, Bypass  3 parameters

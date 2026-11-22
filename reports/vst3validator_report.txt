@@ -15,7 +15,7 @@
 	name = Superalloy
 	category = Audio Module Class
 	subCategories = Fx|Mastering
-	version = 6.3.0
+	version = 6.3.1
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF019182FAEB5776727953616C6F
 
@@ -23,7 +23,7 @@
 	name = Superalloy
 	category = Component Controller Class
 	subCategories = Fx|Mastering
-	version = 6.3.0
+	version = 6.3.1
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF011234ABCD5776727953616C6F
 
@@ -224,7 +224,6 @@ Info:  ===Accuracy: Block, 1 Parameters, Change every100 Samples ===============
 [Accuracy: Sample, 1 Parameters, Change every100 Samples]
 Info:  ===Accuracy: Sample, 1 Parameters, Change every100 Samples ====================================
 Info:     Not all points have been read via IParameterChanges
-Info:     Not all points have been read via IParameterChanges
 [Succeeded]
 
 -------------------------------------------------------------
@@ -297,6 +296,7 @@ Info:  ===Accuracy: Block, 1 Parameters, Change every100 Samples ===============
 
 [Accuracy: Sample, 1 Parameters, Change every100 Samples]
 Info:  ===Accuracy: Sample, 1 Parameters, Change every100 Samples ====================================
+Info:     Not all points have been read via IParameterChanges
 Info:     Not all points have been read via IParameterChanges
 [Succeeded]
 
