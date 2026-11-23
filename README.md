@@ -106,7 +106,7 @@ Phase at 20 Hz in Color: superalloys +26° to +31° (Subtle: +7° to +8°). Dist
 
 ### What each metal does in Curie (352.8 kHz, small signal, dB re input)
 
-| Metal | 20 Hz | 50 Hz | 1 kHz | 5 kHz | 20 kHz | 100 kHz | Phase 20 Hz |
+| Metal | 20 Hz | 50 Hz | 1 kHz | 5 kHz | 20 kHz | 100 kHz | Phase added by the contour, 20 Hz |
 |---|---|---|---|---|---|---|---|
 | Superconductor | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0° |
 | Silver / Copper / Gold | +0.25 … +0.27 | +0.25 … +0.27 | +0.18 … +0.22 | −0.38 … −0.41 | −0.97 … −1.19 | −2.5 … −2.9 | +1° |
@@ -118,7 +118,7 @@ Phase at 20 Hz in Color: superalloys +26° to +31° (Subtle: +7° to +8°). Dist
 
 ### What each metal does in Geiger (352.8 kHz, small signal, dB re input)
 
-| Metal | 20 Hz | 50 Hz | 1 kHz | 5 kHz | 20 kHz | 100 kHz | Phase 20 Hz |
+| Metal | 20 Hz | 50 Hz | 1 kHz | 5 kHz | 20 kHz | 100 kHz | Phase added by the contour, 20 Hz |
 |---|---|---|---|---|---|---|---|
 | Superconductor | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0° |
 | Silver / Copper / Gold | +0.91 … +0.96 | +0.91 … +0.97 | +0.50 … +0.62 | −1.88 … −2.21 | −3.97 … −4.73 | −8.3 … −9.3 | +3° … +5° |
@@ -205,7 +205,16 @@ At 100 Hz, 0 dBFS: copper 0.0008% · Inconel 718 0.042%. At 1 kHz every metal is
 9. **Geiger changes each metal's character, not only its depth. That is what the physics does.** In Color the superalloys have the most open top (−0.16 dB at 20 kHz). At Geiger they are −8 dB at 20 kHz, close to iridium (−7.2 dB), and Pt-Ir is the darkest (−10.2 dB). The reason: a foil winding's internal inductance grows as m² and is the same for every metal. At 2 layers it sits in quadrature with the superalloys' large resistance and barely shows; at 7.5 layers it is larger than the load. Superalloys at Geiger: bass −10.6 dB at 20 Hz, mids +1.8 dB (level match), top −8 dB. Pure metals at Geiger: bass +0.9 dB, top −4 dB.
 10. **Level-match gain is up to +2.33 dB at Geiger** (superalloys), so their midrange sits above the input level. Peaks can therefore exceed the input's peak level. The engine's clip point is unchanged (+18 dBFS).
 11. **Ultrasonic roll-off grows with the level.** At 352.8 kHz, 100 kHz: Color −1 to −4.5 dB, Curie −2.5 to −10 dB, Geiger −8 to −21 dB. This is above the 20 Hz–20 kHz caps, and it does not exist at 44.1/48 kHz.
-12. **Bass phase lead grows with the level.** At 20 Hz: superalloys +46° in Curie and +100° in Geiger (Color +31°, Subtle +8°).
+12. **Bass phase lead grows with the level, in every position and for every metal.** It is the minimum-phase companion of the bass change, not a separate setting. Total phase, René 41, −18 dBFS, measured through the engine:
+
+    | | 20 Hz | 50 Hz | 100 Hz | Bass delay at 50 Hz | at 100 Hz | 20 kHz |
+    |---|---|---|---|---|---|---|
+    | Subtle | +8° | +3° | +2° | 0.19 ms | 0.05 ms | 0° |
+    | Color | +31° | +13° | +7° | 0.73 ms | 0.19 ms | −8° |
+    | Curie | +54° | +25° | +13° | 1.31 ms | 0.36 ms | −25° |
+    | Geiger | +108° | +68° | +41° | 2.38 ms | 0.98 ms | −62° |
+
+    Copper: +0.2° / +0.5° / +1.0° / +3.3° at 20 Hz; its change is in the top (20 kHz: 0° / −2° / −6° / −19°). The superconductor is unchanged in every position. The left and right channels always get identical phase, so the stereo image and mono fold-down are unaffected. The tables above list the phase the contour adds on top of Subtle.
 13. **The programme-level measurement was corrected in rev 6.4.** Earlier harnesses measured on one random pink-noise realisation, whose lowest octaves carry a few percent more or less energy than true pink. That made the measurement itself scatter in proportion to the contour's bass depth: across six seeds, Geiger René 41 read between −0.053 and +0.042 dB, and Color René 41 ±0.007 dB. The harness now plays pink noise with an exact 1/f spectrum (random phase, exact magnitude), periodically, and measures over a full period. Every level then reads within 0.0003 dB for every seed. Section G (Subtle, R1) is unchanged.
 14. **Automation recorded on Contour before rev 6.4 needs re-recording.** Saved sessions recall correctly, because the state stores the position number, so Color stays Color. A host automation lane stores 0–1 instead, and 1.0 used to mean Color but now means Geiger.
 15. **First load at a new sample rate takes longer.** The 45 contour designs are computed once per sample rate and shared by every instance. They are spread over all CPU cores.
