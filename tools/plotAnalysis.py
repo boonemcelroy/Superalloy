@@ -9,7 +9,8 @@ colours cannot all be told apart by colour alone (especially with colour-
 vision deficiency), so the line style and the legend column are the
 second identifier, not decoration.
 
-Usage: python plotAnalysis.py [--color] [--compare-subtle=<subtle response.csv>,<subtle analysis-dir>]
+Usage: python plotAnalysis.py [--contour=0..3 | --color] [--only=g_dev_copper,g_group_delay,...]
+                             [--compare-subtle=<subtle response.csv>,<subtle analysis-dir>]
                              <response.csv> <analysis-dir> <out-dir> [sampleRate]
 Needs: matplotlib, numpy, pandas
 """
@@ -66,15 +67,23 @@ plt.rcParams.update({
 })
 LW = 1.9
 
-MODE = "SUBTLE"          # set by --color
+MODE = "SUBTLE"          # set by --contour=N (0 Subtle, 1 Color, 2 Curie, 3 Geiger); --color = 1
+MODES = ["SUBTLE", "COLOR", "CURIE", "GEIGER"]
 SCALES = {
     "SUBTLE": dict(mag=(-0.25, 0.03, 0.05, 0.01), dev=(-0.25, 0.13, 0.05, 0.01), cap=0.1,
                    zl=(-0.24, 0.005, 0.02), zr=(-0.03, 0.002, 0.005), heat=0.065, phase=(-1, 17, 2, 0.5),
-                   phdev=(-0.4, 20), gd=(1e-3, 5e3), lvl=(-0.01, 0.15), null=(-140, -10), bars=(-90, -20)),
+                   phdev=(-0.4, 20), gd=(1e-3, 5e3), lvl=(-0.01, 0.15), null=(-140, -10), bars=(-90, -20), thdl=0),
     "COLOR":  dict(mag=(-1.5, 0.5, 0.25, 0.05), dev=(-1.5, 1.25, 0.25, 0.05), cap=1.0,
                    zl=(-3.0, 0.3, 0.25), zr=(-6.5, 0.3, 0.5), heat=1.0, phase=(-25, 60, 10, 2),
-                   phdev=(-30, 80), gd=(1e-3, 2e4), lvl=(-0.01, 0.15), null=(-140, 0), bars=(-90, -10)),
+                   phdev=(-30, 80), gd=(1e-3, 2e4), lvl=(-0.01, 0.15), null=(-70, 10), bars=(-90, -10), thdl=0),
+    "CURIE":  dict(mag=(-4.5, 1.0, 0.5, 0.1), dev=(-4.0, 3.5, 0.5, 0.1), cap=3.0,
+                   zl=(-8.0, 1.0, 1.0), zr=(-12.0, 1.0, 1.0), heat=3.0, phase=(-60, 120, 20, 5),
+                   phdev=(-60, 120), gd=(1e-3, 2e4), lvl=(-0.01, 0.15), null=(-70, 10), bars=(-90, 0), thdl=10),
+    "GEIGER": dict(mag=(-14.0, 3.0, 2.0, 0.5), dev=(-13.0, 13.0, 2.0, 0.5), cap=12.0,
+                   zl=(-24.0, 3.0, 3.0), zr=(-26.0, 2.0, 2.0), heat=12.0, phase=(-90, 150, 30, 10),
+                   phdev=(-100, 160), gd=(1e-3, 2e4), lvl=(-0.01, 0.15), null=(-70, 10), bars=(-90, 10), thdl=10),
 }
+CONTOURED = False        # True for Color, Curie, Geiger (a linear contour after the engine)
 
 
 def S(key):
@@ -116,7 +125,18 @@ def legend_column(fig, x0, metals=range(NM)):
 
 
 def footer(fig, text):
-    fig.text(0.065, 0.025, text, color=TEXT_3, fontsize=9.5)
+    if "\n" in text:
+        # Two lines: lift the plotting area (bottom 0.10 -> 0.13, top unchanged) so the
+        # x-axis label clears the footnote, then anchor the footnote to the bottom edge.
+        lo, top, new_lo = 0.10, 0.835, 0.13
+        k = (top - new_lo) / (top - lo)
+        for ax in fig.axes:
+            p = ax.get_position()
+            y0, y1 = new_lo + (p.y0 - lo) * k, new_lo + (p.y1 - lo) * k
+            ax.set_position([p.x0, y0, p.width, y1 - y0])
+        fig.text(0.065, 0.012, text, color=TEXT_3, fontsize=9.5, va="bottom", linespacing=1.4)
+    else:
+        fig.text(0.065, 0.025, text, color=TEXT_3, fontsize=9.5)
 
 
 def style_axes(ax):
@@ -195,16 +215,17 @@ def g_magnitude(d, out, fs):
     ax.set_ylim(lo_, hi_)
     ax.yaxis.set_major_locator(MultipleLocator(mj_))
     ax.yaxis.set_minor_locator(MultipleLocator(mn_))
-    if MODE == "COLOR":
-        for yv in (-1.0, 1.0):
+    if CONTOURED:
+        cap = S("cap")
+        for yv in (-cap, cap):
             ax.axhline(yv, color="#5b7a66", lw=1.0, ls=(0, (3, 3)), zorder=1)
-        ax.text(700, -1.0, "−1 dB cap (20 Hz – 20 kHz)", color="#8fb39c", fontsize=9.5, va="bottom", ha="center")
+        ax.text(700, -cap, f"−{cap:g} dB cap (20 Hz – 20 kHz)", color="#8fb39c", fontsize=9.5, va="bottom", ha="center")
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _p: signed(v, 2) if abs(v) > 1e-9 else "0"))
     ax.set_ylabel("Magnitude (dB)")
     ax.set_xlabel("Frequency (Hz)")
     ax.axhline(0, color=TEXT_3, lw=0.9, zorder=1)
     footer(fig, "Shaded: outside 20 Hz – 20 kHz.  Inconel 625 and René 41 have the same published resistivity, so their traces coincide (René 41 dashed on top)."
-                + ("  Ultrasonic roll-off continues below this window (see the zoom graph)." if MODE == "COLOR" else ""))
+                + ("  Ultrasonic roll-off continues below this window (see the zoom graph)." if CONTOURED else ""))
     fig.savefig(os.path.join(out, "01_magnitude_response.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -264,7 +285,7 @@ def g_dev_zoom(d, out, fs):
         a.set_xlabel("Frequency (Hz)")
         a.axhline(0, color=TEXT_3, lw=0.9, zorder=1)
     footer(fig, "Different vertical scales left and right: the deep-bass window spans 0.24 dB, the top window 0.03 dB." if MODE == "SUBTLE" else
-                "Different vertical scales left and right.  Below 20 Hz and above 20 kHz (shaded) are outside the ±1 dB cap.")
+                f"Different vertical scales left and right.  Below 20 Hz and above 20 kHz (shaded) are outside the ±{S('cap'):g} dB cap.")
     fig.savefig(os.path.join(out, "03_deviation_zoom_bass_and_top.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -313,7 +334,7 @@ def g_heatmap(d, out, fs):
     cb.ax.tick_params(colors=TEXT_3, length=0)
     cb.outline.set_visible(False)
     footer(fig, "Each row's worst band is printed in its cell.  Bands from 20 Hz; the 10 Hz point is outside this map (see the zoom graph)."
-                + ("  Colours saturate at ±1 dB (reached only above 20 kHz)." if MODE == "COLOR" else ""))
+                + (f"  Colours saturate at ±{S('heat'):g} dB." if CONTOURED else ""))
     fig.savefig(os.path.join(out, "04_deviation_map_third_octave.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -335,7 +356,7 @@ def g_phase(d, out, fs):
     ax.set_xlabel("Frequency (Hz)")
     ax.axhline(0, color=TEXT_3, lw=0.9, zorder=1)
     footer(fig, "The superalloys' bass phase lead comes from their higher winding resistance raising the transformer's low-frequency corner to about 2.4 Hz." if MODE == "SUBTLE" else
-                "Bass lead: the Color core puts the superalloys' corner near 9 Hz (a gentle subsonic filter).  Treble lag: the foil winding's eddy-current inductance.")
+                f"Bass lead: the {MODE.title()} core raises the superalloys' low-frequency corner (like a gentle subsonic filter).  Treble lag: the foil winding's eddy-current inductance.")
     fig.savefig(os.path.join(out, "05_phase_response.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -349,7 +370,8 @@ def g_phase_dev(d, out, fs):
     freq_axis(ax, 10, fc[-1])
     ax.set_yscale("symlog", linthresh=0.01, linscale=0.6)
     ax.set_ylim(*S("phdev"))
-    ticks = [-0.1, -0.01, 0, 0.01, 0.1, 1, 10] if MODE == "SUBTLE" else [-10, -1, -0.1, -0.01, 0, 0.01, 0.1, 1, 10]
+    ticks = [-0.1, -0.01, 0, 0.01, 0.1, 1, 10] if MODE == "SUBTLE" else [-100, -10, -1, -0.1, -0.01, 0, 0.01, 0.1, 1, 10, 100]
+    ticks = [v for v in ticks if S("phdev")[0] <= v <= S("phdev")[1]]
     ax.yaxis.set_major_locator(FixedLocator(ticks))
     ax.yaxis.set_minor_locator(FixedLocator([]))
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:+g}°" if v else "0°"))
@@ -364,19 +386,33 @@ def g_phase_dev(d, out, fs):
 def g_group_delay(d, out, fs):
     fig, (ax,) = figure("Group delay", f"−dφ/dω from the measured phase, −18 dBFS  ·  {fs/1000:g} kHz")
     f0 = None
+    neg_min, neg_f, neg_first, neg_band = 0.0, None, None, 0.0
     for m in range(NM):
         f, _, ph = fr(d, m)
         gd = group_delay(f, ph) * 1e6          # µs
         draw(ax, f, np.where(gd > 1e-3, gd, np.nan), m)
         f0 = f
+        i = int(np.argmin(gd))
+        if gd[i] < neg_min:
+            neg_min, neg_f = float(gd[i]), float(f[i])
+        if m > 0 and (gd < 0).any():
+            fn = float(f[gd < 0].min())
+            neg_first = fn if neg_first is None else min(neg_first, fn)
+            neg_band = min(neg_band, float(gd[f <= 20000].min()))
     freq_axis(ax, 10, f0[-1])
     ax.set_yscale("log")
     ax.set_ylim(*S("gd"))
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _p: (f"{v/1000:g} ms" if v >= 1000 else f"{v:g} µs")))
     ax.set_ylabel("Group delay (log)")
     ax.set_xlabel("Frequency (Hz)")
-    footer(fig, "Logarithmic scale; a trace ends where its group delay drops below 0.001 µs.  The plugin has zero latency: this is the frequency-dependent part only.  "
-                "Superconductor: the 0.01 Hz drive DC blocker.")
+    note = ("Logarithmic scale; a trace ends where its group delay drops below 0.001 µs.  The plugin has zero latency: this is the frequency-dependent part only.  "
+            "Superconductor: the 0.01 Hz drive DC blocker.")
+    if CONTOURED and neg_min < -0.01:
+        where = f"{neg_first / 1000:.0f} kHz" if neg_first >= 1000 else f"{neg_first:.0f} Hz"
+        band = f"; in band at most {neg_band:.2f} µs" if neg_band < -0.005 else ""
+        note += (f"\nWhere a trace stops above {where}, the group delay is slightly negative: the foil winding's treble phase lag is unwinding. "
+                 f"Most negative {neg_min:.2f} µs (near {neg_f / 1000:.0f} kHz){band}. A log scale cannot draw it.")
+    footer(fig, note)
     fig.savefig(os.path.join(out, "07_group_delay.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -399,7 +435,7 @@ def g_level_dependence(d, out, fs):
     ax.set_xlabel("Frequency (Hz)")
     ax.axhline(0, color=TEXT_3, lw=0.9, zorder=1)
     footer(fig, "The modelled core inductance rises with flux, so hotter material loses less deep bass. This is a level-dependent (dynamic) effect in the bottom octave."
-                + ("  Color leaves it unchanged (its contour is linear)." if MODE == "COLOR" else ""))
+                + (f"  {MODE.title()} leaves it unchanged (its contour is linear)." if CONTOURED else ""))
     fig.savefig(os.path.join(out, "08_level_dependence.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -426,7 +462,9 @@ def g_thd_freq(d, out, fs):
         pos = ax.get_position()
         ax.set_position([0.125, pos.y0, 0.835 - 0.125, pos.height])
     axes[1].set_xlabel("Fundamental frequency (Hz)")
-    footer(fig, "Harmonics measured up to H9 or 0.45·fs.  −200 dB is the drawing floor (the superconductor sits below it).  Bracketed labels give the same values in %.")
+    footer(fig, "Harmonics measured up to H9 or 0.45·fs.  −200 dB is the drawing floor (the superconductor sits below it).  Bracketed labels give the same values in %."
+                + (f"\n{MODE.title()} adds no nonlinearity: THD rises in the bass only because the contour cuts the fundamental more than its harmonics (harness: every harmonic follows the contour's gain)."
+                   if CONTOURED else ""))
     fig.savefig(os.path.join(out, "09_thd_vs_frequency.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -446,15 +484,19 @@ def g_thd_level(d, out, fs):
             ax.xaxis.set_major_formatter(NullFormatter())
         else:
             ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:+g}" if v else "0"))
-        ax.set_ylim(FLOOR, 0)
+        ax.set_ylim(FLOOR, S("thdl"))
         ax.yaxis.set_major_locator(MultipleLocator(20))
         style_axes(ax)
         ax.axvspan(0, 36, color=BAND, zorder=0, lw=0)
+        if S("thdl") > 0:
+            ax.axhline(0, color=TEXT_3, lw=0.8, ls=(0, (2, 3)), zorder=1)   # harmonics as loud as the fundamental
         ax.axvline(18, color="#8a6d3b", lw=1.1, ls=(0, (3, 3)), zorder=1)
         ax.text(17.6, -192, "+18 dBFS design clip point", color="#c9a46a", fontsize=9.5, va="bottom", ha="right")
         ax.set_ylabel(f"THD at {fq:g} Hz (dB)")
     axes[1].set_xlabel("Input level (dBFS)")
-    footer(fig, "Shaded: above 0 dBFS (only reachable with floating-point input).  Distortion falls toward +18 dBFS as the core moves past its knee, then rises steeply into saturation.")
+    footer(fig, "Shaded: above 0 dBFS (only reachable with floating-point input).  Distortion falls toward +18 dBFS as the core moves past its knee, then rises steeply into saturation."
+                + (f"\n{MODE.title()} adds no nonlinearity: the curves shift up only where the contour cuts the fundamental more than its harmonics."
+                   if CONTOURED else ""))
     fig.savefig(os.path.join(out, "10_thd_vs_level.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -554,7 +596,9 @@ def g_step(d, out, fs):
     ax.axhline(1, color=TEXT_3, lw=0.7, ls=(0, (3, 3)), zorder=1)
     ax.set_ylabel("Output ÷ step")
     ax.set_xlabel("Time (ms)")
-    footer(fig, "A transformer cannot pass DC, so every step decays. The superalloys decay within ~100 ms (corner ≈ 2.4 Hz); the superconductor's slow fall is the 0.01 Hz drive DC blocker.")
+    footer(fig, "A transformer cannot pass DC, so every step decays. The superalloys decay within ~100 ms (corner ≈ 2.4 Hz); the superconductor's slow fall is the 0.01 Hz drive DC blocker."
+                if not CONTOURED else
+                f"A transformer cannot pass DC, so every step decays; the {MODE.title()} core raises the corner, so the superalloys decay faster.  The superconductor's slow fall is the 0.01 Hz drive DC blocker.")
     fig.savefig(os.path.join(out, "14_step_response.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -574,7 +618,8 @@ def g_null_spectrum(d, out, fs):
     ax.yaxis.set_major_locator(MultipleLocator(10))
     ax.set_ylabel("Null residual (dB re programme)")
     ax.set_xlabel("1/3-octave band (Hz)")
-    footer(fig, "Lower = closer to the ideal 0 Ω winding.  The bass residual is mostly phase, not level: 8° of phase alone leaves a −17 dB residual, 30° about −6 dB.")
+    footer(fig, "Lower = closer to the ideal 0 Ω winding.  The bass residual is mostly phase, not level: 8° of phase alone leaves a −17 dB residual, 30° about −6 dB."
+                + ("\nAbove 0 dB the residual is louder than the programme in that band: the metal's large level and phase difference from the superconductor combine." if MODE == "GEIGER" else ""))
     fig.savefig(os.path.join(out, "15_null_spectrum_vs_superconductor.png"), facecolor=SURFACE)
     plt.close(fig)
 
@@ -733,11 +778,17 @@ def g_compare(d_subtle, d_color, out, fs):
 
 
 def main():
-    global MODE
+    global MODE, CONTOURED
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = [a for a in sys.argv[1:] if a.startswith("--")]
     if "--color" in flags:
         MODE = "COLOR"
+    for f in flags:
+        if f.startswith("--contour="):
+            MODE = MODES[max(0, min(3, int(f.split("=", 1)[1])))]
+    CONTOURED = MODE != "SUBTLE"
+    only = [f.split("=", 1)[1].split(",") for f in flags if f.startswith("--only=")]
+    only = set(only[0]) if only else None
     resp, adir, out = args[0], args[1], args[2]
     fs = float(args[3]) if len(args) > 3 else 352800.0
     compare = [f.split("=", 1)[1] for f in flags if f.startswith("--compare-subtle=")]
@@ -746,6 +797,8 @@ def main():
     for g in (scorecard, g_magnitude, g_dev_copper, g_dev_zoom, g_heatmap, g_phase, g_phase_dev, g_group_delay,
               g_level_dependence, g_thd_freq, g_thd_level, g_compression, g_harmonics, g_imd, g_step,
               g_null_spectrum, g_null_bars):
+        if only is not None and g.__name__ not in only:
+            continue
         g(d, out, fs)
         print("rendered", g.__name__)
     if compare:
