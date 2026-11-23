@@ -6,7 +6,7 @@
 #  fetches JUCE 9.0.6 from GitHub.
 # ==============================================================================
 cmake_minimum_required (VERSION 3.22)
-project (Superalloy VERSION 6.3.1 LANGUAGES C CXX)
+project (Superalloy VERSION 6.4.0 LANGUAGES C CXX)
 
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,7 +44,7 @@ juce_add_plugin (Superalloy
     PLUGIN_MANUFACTURER_CODE   Wvry
     PLUGIN_CODE                Salo
     PRODUCT_NAME               "Superalloy"
-    VERSION                    6.3.1
+    VERSION                    6.4.0
     FORMATS                    ${WAVRELY_FORMATS}
     IS_SYNTH                   FALSE
     NEEDS_MIDI_INPUT           FALSE
@@ -86,12 +86,29 @@ endif ()
 
 # ------------------------------------------------------------------ harness
 if (WAVRELY_BUILD_VERIFY)
+    find_package (Threads REQUIRED)
     add_executable (verifySuperalloy tools/verifySuperalloy.cpp Source/TransformerEngine.cpp)
     target_include_directories (verifySuperalloy PRIVATE Source)
+    target_link_libraries (verifySuperalloy PRIVATE Threads::Threads)
     if (MSVC)
         target_compile_options (verifySuperalloy PRIVATE /O2 /fp:precise /utf-8)
     else ()
         target_compile_options (verifySuperalloy PRIVATE -O3 -fno-fast-math -ffp-contract=off)
+    endif ()
+endif ()
+
+# ---------------------------------------------------------- level derivation
+# Re-derives the Curie and Geiger geometries from Color (prints the derivation).
+option (WAVRELY_BUILD_DESIGN "Build the contour-level derivation tool" OFF)
+if (WAVRELY_BUILD_DESIGN)
+    find_package (Threads REQUIRED)
+    add_executable (designLevels tools/designLevels.cpp Source/TransformerEngine.cpp)
+    target_include_directories (designLevels PRIVATE Source)
+    target_link_libraries (designLevels PRIVATE Threads::Threads)
+    if (MSVC)
+        target_compile_options (designLevels PRIVATE /O2 /fp:precise /utf-8)
+    else ()
+        target_compile_options (designLevels PRIVATE -O3 -fno-fast-math -ffp-contract=off)
     endif ()
 endif ()
 

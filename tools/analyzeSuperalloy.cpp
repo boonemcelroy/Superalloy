@@ -20,7 +20,7 @@
     quadratic trend (absorbs the slow 0.01 Hz drive-blocker and magnetising
     transients).
 
-    Usage: analyzeSuperalloy [--color] <out-dir> [sampleRate]   (default 352800)
+    Usage: analyzeSuperalloy [--contour=0..3 | --color] <out-dir> [sampleRate]   (default 352800)
   ==============================================================================
 */
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -104,11 +104,12 @@ namespace
     // One mono processor per metal.
     struct Rig
     {
-        Rig (int metal, double sampleRate, bool color = false) : fs (sampleRate)
+        Rig (int metal, double sampleRate, int contour = 0) : fs (sampleRate)
         {
             auto* p = proc.apvts.getParameter ("metal");
             p->setValueNotifyingHost (p->convertTo0to1 ((float) metal));
-            proc.apvts.getParameter ("contour")->setValueNotifyingHost (color ? 1.0f : 0.0f);
+            auto* cp = proc.apvts.getParameter ("contour");
+            cp->setValueNotifyingHost (cp->convertTo0to1 ((float) contour));
             juce::AudioProcessor::BusesLayout mono;
             mono.inputBuses.add (juce::AudioChannelSet::mono());
             mono.outputBuses.add (juce::AudioChannelSet::mono());
@@ -365,11 +366,13 @@ int main (int argc, char** argv)
 {
     superalloy::tools::useUtf8Console();
     juce::ScopedJuceInitialiser_GUI init;
-    bool color = false;
+    int color = 0;   // contour position: 0 Subtle, 1 Color, 2 Curie, 3 Geiger
     {
         int w = 1;
         for (int i = 1; i < argc; ++i)
-            if (std::string (argv[i]) == "--color") color = true; else argv[w++] = argv[i];
+            if (std::string (argv[i]) == "--color") color = 1;
+            else if (std::string (argv[i]).rfind ("--contour=", 0) == 0) color = std::clamp (std::atoi (argv[i] + 10), 0, 3);
+            else argv[w++] = argv[i];
         argc = w;
     }
 

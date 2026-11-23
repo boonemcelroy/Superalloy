@@ -1,16 +1,17 @@
 Superalloy host check: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
-  [PASS] VST3 found and described  Superalloy 6.3.1 by wavRely Mastering Systems
+  [PASS] VST3 found and described  Superalloy 6.4.0 by wavRely Mastering Systems
 
 48.0 kHz, block 480, single precision
   [PASS] Exports Metal, Contour, Bypass  3 parameters
   [PASS] Host sees Bypass as the plugin's bypass (VST3 kIsBypass)  Bypass
   [PASS] Reports zero latency  0
   [PASS] Engaged: Copper / Subtle changes the signal  -41.6 dB residual vs input
-  [PASS] Metal + Contour reach the DSP (René 41 / Color)  -7.4 dB residual vs input; Metal reads "René 41", Contour reads "Color"
+  [PASS] Metal + Contour reach the DSP (René 41 / Geiger)  -3.1 dB residual vs input; Metal reads "René 41", Contour reads "Geiger"
   [PASS] Bypass On: output == input, bit for bit  max |out - in| = 0
   [PASS] Bypass Off: identical to an instance never bypassed  max |diff| = 0
-  [PASS] No click entering or leaving bypass  max step in fades 0.27658 vs programme 0.37083
-  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Color / Bypass 1
+  [PASS] No click entering or leaving bypass  max step in fades 0.26121 vs programme 0.37083
+  [PASS] Contour: all four positions reach the DSP, each stronger than the last  René 41 residual vs input: Subtle -11.4 dB, Color -5.5 dB, Curie -4.8 dB, Geiger -3.2 dB
+  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Geiger / Bypass 1
   [PASS] Recalled instance is bypassed from its first sample  max |out - in| = 0
 
 352.8 kHz, block 512, single precision
@@ -18,11 +19,12 @@ Superalloy host check: /home/claude/Superalloy/build/Superalloy_artefacts/Releas
   [PASS] Host sees Bypass as the plugin's bypass (VST3 kIsBypass)  Bypass
   [PASS] Reports zero latency  0
   [PASS] Engaged: Copper / Subtle changes the signal  -45.9 dB residual vs input
-  [PASS] Metal + Contour reach the DSP (René 41 / Color)  -11.0 dB residual vs input; Metal reads "René 41", Contour reads "Color"
+  [PASS] Metal + Contour reach the DSP (René 41 / Geiger)  -2.7 dB residual vs input; Metal reads "René 41", Contour reads "Geiger"
   [PASS] Bypass On: output == input, bit for bit  max |out - in| = 0
   [PASS] Bypass Off: identical to an instance never bypassed  max |diff| = 0
-  [PASS] No click entering or leaving bypass  max step in fades 0.29406 vs programme 0.43078
-  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Color / Bypass 1
+  [PASS] No click entering or leaving bypass  max step in fades 0.27366 vs programme 0.43078
+  [PASS] Contour: all four positions reach the DSP, each stronger than the last  René 41 residual vs input: Subtle -21.6 dB, Color -11.6 dB, Curie -7.0 dB, Geiger -2.6 dB
+  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Geiger / Bypass 1
   [PASS] Recalled instance is bypassed from its first sample  max |out - in| = 0
 
 352.8 kHz, block 512, double precision
@@ -30,11 +32,12 @@ Superalloy host check: /home/claude/Superalloy/build/Superalloy_artefacts/Releas
   [PASS] Host sees Bypass as the plugin's bypass (VST3 kIsBypass)  Bypass
   [PASS] Reports zero latency  0
   [PASS] Engaged: Copper / Subtle changes the signal  -45.9 dB residual vs input
-  [PASS] Metal + Contour reach the DSP (René 41 / Color)  -11.0 dB residual vs input; Metal reads "René 41", Contour reads "Color"
+  [PASS] Metal + Contour reach the DSP (René 41 / Geiger)  -2.7 dB residual vs input; Metal reads "René 41", Contour reads "Geiger"
   [PASS] Bypass On: output == input, bit for bit  max |out - in| = 0
   [PASS] Bypass Off: identical to an instance never bypassed  max |diff| = 0
-  [PASS] No click entering or leaving bypass  max step in fades 0.29406 vs programme 0.43078
-  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Color / Bypass 1
+  [PASS] No click entering or leaving bypass  max step in fades 0.27366 vs programme 0.43078
+  [PASS] Contour: all four positions reach the DSP, each stronger than the last  René 41 residual vs input: Subtle -21.6 dB, Color -11.6 dB, Curie -7.0 dB, Geiger -2.6 dB
+  [PASS] Saved state recalls Metal, Contour, Bypass  René 41 / Geiger / Bypass 1
   [PASS] Recalled instance is bypassed from its first sample  max |out - in| = 0
 
 RESULT: ALL CHECKS PASSED (0 failures)

@@ -21,7 +21,7 @@ juce::StringArray SuperalloyAudioProcessor::metalNames()
 
 juce::StringArray SuperalloyAudioProcessor::contourNames()
 {
-    return { "Subtle", "Color" };
+    return { "Subtle", "Color", "Curie", "Geiger" };
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SuperalloyAudioProcessor::createLayout()
@@ -69,11 +69,11 @@ void SuperalloyAudioProcessor::prepareToPlay (double sampleRate, int)
 {
     bank = bankForRate (sampleRate);
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
-    const bool color = contourParam->load() >= 0.5f;
+    const int contour = juce::jlimit (0, ColorStage::kPositions - 1, (int) std::lround (contourParam->load()));
     const bool bypass = bypassRaw->load() >= 0.5f;
     channels.assign ((size_t) juce::jmax (1, getTotalNumOutputChannels()), Channel630 {});
     for (auto& c : channels)
-        c.prepare (*bank, metal, color, bypass);
+        c.prepare (*bank, metal, contour, bypass);
     setLatencySamples (0);
 }
 
@@ -102,14 +102,14 @@ void SuperalloyAudioProcessor::processSamples (juce::AudioBuffer<Sample>& buffer
     const int numCh = juce::jmin (buffer.getNumChannels(), (int) channels.size());
     const int n = buffer.getNumSamples();
     const int metal = juce::jlimit (0, kNumMetals - 1, (int) std::lround (metalParam->load()));
-    const bool color = contourParam->load() >= 0.5f;
+    const int contour = juce::jlimit (0, ColorStage::kPositions - 1, (int) std::lround (contourParam->load()));
     const bool bypass = forceBypass || bypassRaw->load() >= 0.5f;
 
     for (int ch = 0; ch < numCh; ++ch)
     {
         auto& c = channels[(size_t) ch];
         c.selectMetal (metal);                      // seamless: 40 ms crossfade inside
-        c.selectColor (color);                      // seamless: 40 ms crossfade inside
+        c.selectContour (contour);                  // seamless: 40 ms crossfade inside
         c.selectBypass (bypass);                    // true bypass, seamless: 40 ms crossfade inside
         Sample* d = buffer.getWritePointer (ch);
         for (int i = 0; i < n; ++i)

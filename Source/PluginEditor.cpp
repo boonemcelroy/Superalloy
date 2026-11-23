@@ -63,11 +63,12 @@ juce::Font SuperalloyLookAndFeel::getPopupMenuFont()
 }
 
 //==============================================================================
-SegmentSwitch::SegmentSwitch (juce::RangedAudioParameter& param, juce::String leftText, juce::String rightText,
+SegmentSwitch::SegmentSwitch (juce::RangedAudioParameter& param, juce::StringArray segmentLabels,
                               const juce::String& title, const juce::String& description)
-    : attachment (param, [this] (float v) { current = juce::jlimit (0, 1, (int) std::lround (v)); repaint(); }),
-      left (std::move (leftText)), right (std::move (rightText))
+    : attachment (param, [this] (float v) { current = juce::jlimit (0, labels.size() - 1, (int) std::lround (v)); repaint(); }),
+      labels (std::move (segmentLabels))
 {
+    jassert (labels.size() >= 2);
     setTitle (title);
     setDescription (description);
     setWantsKeyboardFocus (true);
@@ -77,22 +78,31 @@ SegmentSwitch::SegmentSwitch (juce::RangedAudioParameter& param, juce::String le
 
 void SegmentSwitch::select (int index)
 {
-    index = juce::jlimit (0, 1, index);
+    index = juce::jlimit (0, labels.size() - 1, index);
     if (index != current)
         attachment.setValueAsCompleteGesture ((float) index);
+}
+
+juce::Rectangle<float> SegmentSwitch::segmentBounds (int index) const
+{
+    const auto inner = getLocalBounds().toFloat().reduced (3.5f);
+    const float w = inner.getWidth() / (float) labels.size();
+    return { inner.getX() + w * (float) index, inner.getY(), w, inner.getHeight() };
 }
 
 void SegmentSwitch::mouseUp (const juce::MouseEvent& e)
 {
     if (getLocalBounds().contains (e.getPosition()))
-        select (e.x < getWidth() / 2 ? 0 : 1);
+        select (juce::jlimit (0, labels.size() - 1, (int) ((float) e.x * (float) labels.size() / (float) getWidth())));
 }
 
 bool SegmentSwitch::keyPressed (const juce::KeyPress& k)
 {
-    if (k == juce::KeyPress::leftKey)  { select (0); return true; }
-    if (k == juce::KeyPress::rightKey) { select (1); return true; }
-    if (k == juce::KeyPress::spaceKey || k == juce::KeyPress::returnKey) { select (1 - current); return true; }
+    if (k == juce::KeyPress::leftKey)  { select (current - 1); return true; }
+    if (k == juce::KeyPress::rightKey) { select (current + 1); return true; }
+    if (k == juce::KeyPress::homeKey)  { select (0); return true; }
+    if (k == juce::KeyPress::endKey)   { select (labels.size() - 1); return true; }
+    if (k == juce::KeyPress::spaceKey || k == juce::KeyPress::returnKey) { select ((current + 1) % labels.size()); return true; }
     return false;
 }
 
@@ -105,8 +115,7 @@ void SegmentSwitch::paint (juce::Graphics& g)
     g.fillRoundedRectangle (r, radius);
 
     // selected segment: a heat-tinted inlay
-    auto seg = r.reduced (3.0f);
-    seg = current == 0 ? seg.removeFromLeft (seg.getWidth() * 0.5f) : seg.removeFromRight (seg.getWidth() * 0.5f);
+    const auto seg = segmentBounds (current);
     juce::ColourGradient grad (kTemperLight.withAlpha (0.92f), seg.getX(), seg.getY(),
                                kTemperDark.withAlpha (0.92f), seg.getRight(), seg.getBottom(), false);
     g.setGradientFill (grad);
@@ -123,19 +132,19 @@ void SegmentSwitch::paint (juce::Graphics& g)
     }
 
     g.setFont (juce::Font (juce::FontOptions (13.0f)).withExtraKerningFactor (0.22f));
-    const auto leftArea = getLocalBounds().removeFromLeft (getWidth() / 2);
-    const auto rightArea = getLocalBounds().removeFromRight (getWidth() - getWidth() / 2);
-    g.setColour (current == 0 ? kTextBright : kTextDim);
-    g.drawText (left, leftArea, juce::Justification::centred);
-    g.setColour (current == 1 ? kTextBright : kTextDim);
-    g.drawText (right, rightArea, juce::Justification::centred);
+    for (int i = 0; i < labels.size(); ++i)
+    {
+        g.setColour (i == current ? kTextBright : kTextDim);
+        g.drawText (labels[i], segmentBounds (i).toNearestInt(), juce::Justification::centred);
+    }
 }
 
 //==============================================================================
 SuperalloyAudioProcessorEditor::SuperalloyAudioProcessorEditor (SuperalloyAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p),
-      contour (*p.apvts.getParameter ("contour"), "SUBTLE", "COLOR", "Contour", "Subtle or Color"),
-      bypass  (*p.apvts.getParameter ("bypass"),  "OFF",    "ON",    "Bypass",  "True bypass: On passes the input through untouched")
+      contour (*p.apvts.getParameter ("contour"), { "SUBTLE", "COLOR", "CURIE", "GEIGER" }, "Contour",
+               "Intensity: Subtle, Color (4x), Curie (12x), Geiger (48x)"),
+      bypass  (*p.apvts.getParameter ("bypass"),  { "OFF", "ON" }, "Bypass", "True bypass: On passes the input through untouched")
 {
     setLookAndFeel (&lnf);
     background = superalloy::texture::renderHeatTintedInconel (kWidth, kHeight);
@@ -180,7 +189,7 @@ void SuperalloyAudioProcessorEditor::paint (juce::Graphics& g)
 void SuperalloyAudioProcessorEditor::resized()
 {
     metalBox.setBounds (getLocalBounds().withSizeKeepingCentre (380, 38).translated (0, -22));
-    contour.setBounds (juce::Rectangle<int> (0, 0, 240, 32)
+    contour.setBounds (juce::Rectangle<int> (0, 0, metalBox.getWidth(), 32)       // four segments, as wide as the Metal box
                            .withX (metalBox.getX())
                            .withY (metalBox.getBottom() + 44));
     bypass.setBounds (juce::Rectangle<int> (0, 0, 150, 32)

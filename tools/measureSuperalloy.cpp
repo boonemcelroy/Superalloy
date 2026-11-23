@@ -16,7 +16,7 @@
         0.01 Hz drive-blocker and magnetising-inductance transients)
       * gain = sqrt(a²+b²)/A, phase = atan2(b, a)
 
-    Usage: measureSuperalloy [--color] <out.csv> [sampleRate] [levelDBFS ...]
+    Usage: measureSuperalloy [--contour=0..3 | --color] <out.csv> [sampleRate] [levelDBFS ...]
     Defaults: 352800 Hz, levels -18 and 0 dBFS.
     CSV columns: metal,level_dbfs,freq_hz,mag_db,phase_deg
   ==============================================================================
@@ -119,9 +119,15 @@ int main (int argc, char** argv)
 {
     superalloy::tools::useUtf8Console();
     juce::ScopedJuceInitialiser_GUI init;
-    bool color = false;
+    int color = 0;   // contour position: 0 Subtle, 1 Color, 2 Curie, 3 Geiger
     std::vector<std::string> args;
-    for (int i = 1; i < argc; ++i) { if (std::string (argv[i]) == "--color") color = true; else args.emplace_back (argv[i]); }
+    for (int i = 1; i < argc; ++i)
+    {
+        const std::string a (argv[i]);
+        if (a == "--color") color = 1;
+        else if (a.rfind ("--contour=", 0) == 0) color = std::clamp (std::atoi (argv[i] + 10), 0, 3);
+        else args.emplace_back (argv[i]);
+    }
     const std::string outPath = args.size() > 0 ? args[0] : "superalloy_response.csv";
     const double fs = args.size() > 1 ? std::atof (args[1].c_str()) : 352800.0;
     std::vector<double> levels;
@@ -148,7 +154,8 @@ int main (int argc, char** argv)
             SuperalloyAudioProcessor proc;
             auto* p = proc.apvts.getParameter ("metal");
             p->setValueNotifyingHost (p->convertTo0to1 ((float) m));
-            proc.apvts.getParameter ("contour")->setValueNotifyingHost (color ? 1.0f : 0.0f);
+            auto* cp = proc.apvts.getParameter ("contour");
+            cp->setValueNotifyingHost (cp->convertTo0to1 ((float) color));
             proc.setPlayConfigDetails (2, 2, fs, 4096);
             proc.setProcessingPrecision (juce::AudioProcessor::doublePrecision);
             proc.prepareToPlay (fs, 4096);

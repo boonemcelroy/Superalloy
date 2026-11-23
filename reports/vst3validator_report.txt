@@ -15,7 +15,7 @@
 	name = Superalloy
 	category = Audio Module Class
 	subCategories = Fx|Mastering
-	version = 6.3.1
+	version = 6.4.0
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF019182FAEB5776727953616C6F
 
@@ -23,7 +23,7 @@
 	name = Superalloy
 	category = Component Controller Class
 	subCategories = Fx|Mastering
-	version = 6.3.1
+	version = 6.4.0
 	sdkVersion = VST 3.8.0
 	cid = ABCDEF011234ABCD5776727953616C6F
 
@@ -61,7 +61,7 @@ Info:  => Event Buses: [0 In(s) => 0 Out(s)]
 Info:  ===Scan Parameters ====================================
 Info:  This component exports 3 parameter(s)
 Info:     Parameter 000 (id=103787271): [title="Metal"] [unit=""] [type = Discrete, default = 0.142857, unit = 0]
-Info:     Parameter 001 (id=951540442): [title="Contour"] [unit=""] [type = Toggle, default = 0.000000, unit = 0]
+Info:     Parameter 001 (id=951540442): [title="Contour"] [unit=""] [type = Discrete, default = 0.000000, unit = 0]
 Info:     Parameter 002 (id=773352680): [title="Bypass"] [unit=""] [type = Toggle, default = 0.000000, unit = 0]
 [Succeeded]
 
@@ -296,7 +296,6 @@ Info:  ===Accuracy: Block, 1 Parameters, Change every100 Samples ===============
 
 [Accuracy: Sample, 1 Parameters, Change every100 Samples]
 Info:  ===Accuracy: Sample, 1 Parameters, Change every100 Samples ====================================
-Info:     Not all points have been read via IParameterChanges
 Info:     Not all points have been read via IParameterChanges
 [Succeeded]
 

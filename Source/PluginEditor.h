@@ -1,9 +1,9 @@
 /*
   ==============================================================================
     Superalloy — PluginEditor.h
-    A medium heat-tinted Inconel rectangle with one dropdown ("Metal"), one
-    two-position switch ("Contour": Subtle / Color) and, top right, a
-    two-position "Bypass" switch (Off / On) in the same style.
+    A medium heat-tinted Inconel rectangle with one dropdown ("Metal"), a
+    four-position switch ("Contour": Subtle / Color / Curie / Geiger) and, top
+    right, a two-position "Bypass" switch (Off / On) in the same style.
   ==============================================================================
 */
 #pragma once
@@ -24,12 +24,12 @@ public:
 };
 
 //==============================================================================
-// Two-segment switch bound to a two-state parameter (choice with 2 items, or bool).
-// Left segment = value 0, right segment = value 1.
+// Segmented switch bound to a stepped parameter (a choice, or a bool for two
+// segments). Segment i, counted from the left, selects value i.
 class SegmentSwitch final : public juce::Component
 {
 public:
-    SegmentSwitch (juce::RangedAudioParameter& param, juce::String leftText, juce::String rightText,
+    SegmentSwitch (juce::RangedAudioParameter& param, juce::StringArray segmentLabels,
                    const juce::String& title, const juce::String& description);
 
     void paint (juce::Graphics&) override;
@@ -38,9 +38,10 @@ public:
 
 private:
     void select (int index);
+    juce::Rectangle<float> segmentBounds (int index) const;
 
     juce::ParameterAttachment attachment;
-    juce::String left, right;
+    juce::StringArray labels;
     int current = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SegmentSwitch)

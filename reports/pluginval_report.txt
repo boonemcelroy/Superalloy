@@ -1,5 +1,5 @@
 Started validating: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
-Random seed: 0x4f076d
+Random seed: 0x2be8540
 Validation started
 Strictness level: 10
 -----------------------------------------------------------------
@@ -7,7 +7,7 @@ Starting tests in: pluginval / Scan for plugins located in: /home/claude/Superal
 Num plugins found: 1
 
 Testing plugin: VST3-Superalloy-2d4ebbf8-39215aa0
-wavRely Mastering Systems: Superalloy v6.3.1
+wavRely Mastering Systems: Superalloy v6.4.0
 Completed tests in pluginval / Scan for plugins located in: /home/claude/Superalloy/build/Superalloy_artefacts/Release/VST3/Superalloy.vst3
 -----------------------------------------------------------------
 Starting tests in: pluginval / Open plugin (cold)...

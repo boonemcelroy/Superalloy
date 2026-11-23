@@ -132,7 +132,9 @@ J. SILENCE, IMPULSE, LATENCY, STABILITY
   [PASS] Zero latency, no ringing René 41: peak at sample 0, value 0.999787, max 2nd-difference of tail n>=64 5.56e-11 (limit 1e-9)
   [PASS] 60 s hot programme stable max Newton iterations 3
 
-L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01 dB on pink noise, no added distortion)
+L. CONTOUR LEVELS (owner rulings: Color +/-1 dB; Curie +/-3 dB = 3x Color; Geiger +/-12 dB = 12x Color = 48x Subtle;
+   programme level <= 0.01 dB on pink noise in every level; no added distortion)
+  Color: core factor 3.9 (Lm / 3.9), foil 2.4 mm x 2 layers, 3 HF sections, cap +/-1 dB
   metal                                            fit 44.1k  fit 352.8k     20 Hz     1 kHz     5 kHz    20 kHz   gain dB
   Superconductor (NbTi, 0 Ω reference)             0.00e+00    0.00e+00    +0.000    +0.000    +0.000    +0.000   +0.0000
   Silver — Ohno Continuous Cast 7N                2.78e-04    2.70e-04    +0.095    +0.070    -0.131    -0.367   +0.0949
@@ -150,37 +152,33 @@ L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01
   Inconel 625                                       1.80e-05    1.05e-06    -0.854    +0.120    +0.102    -0.162   +0.1206
   René 41                                          1.80e-05    1.05e-06    -0.854    +0.120    +0.102    -0.162   +0.1206
   [PASS] Color contour realisation worst |realised - design| 20 Hz-20 kHz, 44.1 + 352.8 kHz: 0.00042 dB (limit 0.002)
-  [PASS] Color contour physics LF x HF factorisation vs exact Color/Subtle network ratio: 0.00555 dB (limit 0.01)
-  [PASS] Color cap (+/-1 dB vs flat) worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: 0.861 dB (limit 1.0)
+  [PASS] Color contour physics realised contour vs exact Color/Subtle network ratio, 20 Hz-20 kHz: 0.00555 dB (limit 0.01; open-core HF factor, as in rev 6.2)
+  [PASS] Color cap (vs flat) worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: 0.861 dB (limit 1.0)
   [PASS] Color cap (any two metals) worst difference between any two metals 20 Hz-20 kHz: 0.967 dB at 20 Hz (limit 1.0)
   [PASS] Color measured response engine vs analytic, 5 metals x 5 frequencies, -40 dBFS: 0.00055 dB (limit 0.005)
-    Color Superconductor (NbTi, 0 Ω reference)    +0.00010 dB re Subtle copper
-    Color Silver — Ohno Continuous Cast 7N       +0.00271 dB re Subtle copper
-    Color Copper — Grade 1 6N OFC                +0.00275 dB re Subtle copper
-    Color Gold — pure                            +0.00291 dB re Subtle copper
-    Color Rhodium                                  +0.00316 dB re Subtle copper
-    Color Iridium                                  +0.00317 dB re Subtle copper
-    Color Platinum-Iridium 10 (kilogram-prototype alloy) +0.00206 dB re Subtle copper
-    Color Monel 400                                +0.00139 dB re Subtle copper
-    Color Haynes 188                               +0.00054 dB re Subtle copper
-    Color MP35N                                    +0.00050 dB re Subtle copper
-    Color Waspaloy                                 +0.00005 dB re Subtle copper
-    Color Inconel 718                              -0.00000 dB re Subtle copper
-    Color Hastelloy C-276                          -0.00005 dB re Subtle copper
-    Color Inconel 625                              -0.00013 dB re Subtle copper
-    Color René 41                                 -0.00013 dB re Subtle copper
-  [PASS] Color programme level worst |Color metal - Subtle copper| = 0.00317 dB (limit 0.01)
-    Copper — Grade 1 6N OFC                   20 Hz 0 dBFS: THD Subtle 0.0112 %  Color 0.0112 %  (+0.00 dB)
-    Copper — Grade 1 6N OFC                  100 Hz 0 dBFS: THD Subtle 0.0007 %  Color 0.0007 %  (-0.00 dB)
-    Inconel 718                                 20 Hz 0 dBFS: THD Subtle 0.6716 %  Color 0.7322 %  (+0.75 dB)
-    Inconel 718                                100 Hz 0 dBFS: THD Subtle 0.0424 %  Color 0.0425 %  (+0.03 dB)
-    René 41                                    20 Hz 0 dBFS: THD Subtle 0.6935 %  Color 0.7601 %  (+0.80 dB)
-    René 41                                   100 Hz 0 dBFS: THD Subtle 0.0437 %  Color 0.0438 %  (+0.04 dB)
-  [PASS] Color adds no distortion worst Color - Subtle THD = +0.80 dB (limit +1.0; only the linear contour's tilt between H1 and H3 acts)
-  [PASS] Subtle -> Color converges exactly Rene 41: after fade -3029.5 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
-  [PASS] No click (Subtle -> Color) max sample step in switch window 0.04488 vs programme max 0.05908
-  [PASS] Color metal change converges Copper -> Rene 41 in Color: 0-250 ms -67.3 dB, 250 ms-3 s -118.4 dB re signal (limit -60 / -90)
-  [PASS] No click (metal change in Color) max sample step in switch window 0.04415 vs programme max 0.05908
+    Color  Superconductor (NbTi, 0 Ω reference)    +0.00010 dB re Subtle copper
+    Color  Silver — Ohno Continuous Cast 7N       +0.00010 dB re Subtle copper
+    Color  Copper — Grade 1 6N OFC                +0.00010 dB re Subtle copper
+    Color  Gold — pure                            +0.00010 dB re Subtle copper
+    Color  Rhodium                                  +0.00009 dB re Subtle copper
+    Color  Iridium                                  +0.00009 dB re Subtle copper
+    Color  Platinum-Iridium 10 (kilogram-prototype alloy) +0.00010 dB re Subtle copper
+    Color  Monel 400                                +0.00014 dB re Subtle copper
+    Color  Haynes 188                               +0.00027 dB re Subtle copper
+    Color  MP35N                                    +0.00027 dB re Subtle copper
+    Color  Waspaloy                                 +0.00032 dB re Subtle copper
+    Color  Inconel 718                              +0.00033 dB re Subtle copper
+    Color  Hastelloy C-276                          +0.00033 dB re Subtle copper
+    Color  Inconel 625                              +0.00034 dB re Subtle copper
+    Color  René 41                                 +0.00034 dB re Subtle copper
+  [PASS] Color programme level worst |Color metal - Subtle copper| = 0.00034 dB on the exact pink spectrum (limit 0.01)
+    Copper — Grade 1 6N OFC                   20 Hz 0 dBFS: THD Subtle 0.0112 %  Color 0.0112 %  | contour at f +0.10 dB, at 3f +0.10 dB | harmonics follow the contour within 0.0000 dB
+    Copper — Grade 1 6N OFC                  100 Hz 0 dBFS: THD Subtle 0.0007 %  Color 0.0007 %  | contour at f +0.10 dB, at 3f +0.09 dB | harmonics follow the contour within 0.0000 dB
+    Inconel 718                                 20 Hz 0 dBFS: THD Subtle 0.6716 %  Color 0.7322 %  | contour at f -0.73 dB, at 3f +0.01 dB | harmonics follow the contour within 0.0080 dB
+    Inconel 718                                100 Hz 0 dBFS: THD Subtle 0.0424 %  Color 0.0425 %  | contour at f +0.08 dB, at 3f +0.11 dB | harmonics follow the contour within 0.0000 dB
+    René 41                                    20 Hz 0 dBFS: THD Subtle 0.6935 %  Color 0.7601 %  | contour at f -0.78 dB, at 3f +0.01 dB | harmonics follow the contour within 0.0082 dB
+    René 41                                   100 Hz 0 dBFS: THD Subtle 0.0437 %  Color 0.0438 %  | contour at f +0.08 dB, at 3f +0.12 dB | harmonics follow the contour within 0.0000 dB
+  [PASS] Color adds no distortion every harmonic H1-H5 changes by exactly the contour's gain at its frequency: worst 0.0082 dB (limit 0.05)
   [PASS] Color: digital silence in -> exact zero out 
   [PASS] Color: zero latency, no ringing 44.1 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 2.58e-25 (limit 1e-3, or alternating energy 3.1e-32 < 1e-24)
   [PASS] Color: zero latency, no ringing 44.1 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 1.53e-20 (limit 1e-3, or alternating energy 2.3e-25 < 1e-24)
@@ -190,6 +188,135 @@ L. CONTOUR = COLOR (owner rulings: +/-1 dB 20 Hz-20 kHz, programme level <= 0.01
   [PASS] Color: zero latency, no ringing 352.8 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 2.63e-08 (limit 1e-3, or alternating energy 1.7e-14 < 1e-24)
   [PASS] Color: zero latency, no ringing 352.8 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 4.26e-11 (limit 1e-3, or alternating energy 1.3e-16 < 1e-24)
   [PASS] Color: zero latency, no ringing 352.8 kHz René 41: peak at sample 0, tail alternating/smooth energy 6.58e-17 (limit 1e-3, or alternating energy 7.9e-21 < 1e-24)
+
+  Curie: core factor 7.64 (Lm / 7.64), foil 2.4 mm x 3.36 layers, 6 HF sections, cap +/-3 dB
+  metal                                            fit 44.1k  fit 352.8k     20 Hz     1 kHz     5 kHz    20 kHz   gain dB
+  Superconductor (NbTi, 0 Ω reference)             0.00e+00    0.00e+00    +0.000    +0.000    +0.000    +0.000   +0.0000
+  Silver — Ohno Continuous Cast 7N                9.94e-05    3.90e-05    +0.250    +0.176    -0.383    -0.970   +0.2815
+  Copper — Grade 1 6N OFC                         9.25e-05    3.41e-05    +0.254    +0.184    -0.391    -1.002   +0.2856
+  Gold — pure                                     6.20e-05    1.63e-05    +0.272    +0.216    -0.411    -1.186   +0.3046
+  Rhodium                                           4.16e-05    3.45e-05    +0.296    +0.269    -0.319    -1.808   +0.3331
+  Iridium                                           3.72e-05    2.45e-05    +0.296    +0.274    -0.286    -1.949   +0.3348
+  Platinum-Iridium 10 (kilogram-prototype alloy)    2.94e-05    6.96e-06    +0.055    +0.243    +0.005    -2.394   +0.2819
+  Monel 400                                         2.41e-05    2.32e-06    -0.510    +0.255    +0.089    -1.876   +0.2897
+  Haynes 188                                        1.90e-05    1.61e-06    -1.798    +0.334    +0.213    -1.346   +0.3650
+  MP35N                                             1.89e-05    1.60e-06    -1.855    +0.338    +0.218    -1.328   +0.3685
+  Waspaloy                                          1.75e-05    1.56e-06    -2.393    +0.373    +0.263    -1.173   +0.4024
+  Inconel 718                                       1.74e-05    1.55e-06    -2.449    +0.376    +0.268    -1.158   +0.4060
+  Hastelloy C-276                                   1.72e-05    1.55e-06    -2.505    +0.380    +0.273    -1.142   +0.4095
+  Inconel 625                                       1.71e-05    1.55e-06    -2.590    +0.385    +0.280    -1.120   +0.4148
+  René 41                                          1.71e-05    1.55e-06    -2.590    +0.385    +0.280    -1.120   +0.4148
+  [PASS] Curie contour realisation worst |realised - design| 20 Hz-20 kHz, 44.1 + 352.8 kHz: 0.00028 dB (limit 0.002)
+  [PASS] Curie contour physics realised contour vs exact Curie/Subtle network ratio, 20 Hz-20 kHz: 0.00004 dB (limit 0.002; fitted to the exact network)
+  [PASS] Curie cap (vs flat) worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: 2.615 dB (limit 3.0)
+  [PASS] Curie cap (any two metals) worst difference between any two metals 20 Hz-20 kHz: 2.901 dB at 20 Hz (limit 3.0)
+  [PASS] Curie intensity difference between metals 2.901 dB = 2.999 x Color's 0.967 dB (owner: 3x, +/-1%)
+  [PASS] Curie measured response engine vs analytic, 5 metals x 5 frequencies, -40 dBFS: 0.00055 dB (limit 0.005)
+    Curie  Superconductor (NbTi, 0 Ω reference)    +0.00010 dB re Subtle copper
+    Curie  Silver — Ohno Continuous Cast 7N       +0.00009 dB re Subtle copper
+    Curie  Copper — Grade 1 6N OFC                +0.00009 dB re Subtle copper
+    Curie  Gold — pure                            +0.00009 dB re Subtle copper
+    Curie  Rhodium                                  +0.00008 dB re Subtle copper
+    Curie  Iridium                                  +0.00008 dB re Subtle copper
+    Curie  Platinum-Iridium 10 (kilogram-prototype alloy) +0.00008 dB re Subtle copper
+    Curie  Monel 400                                +0.00013 dB re Subtle copper
+    Curie  Haynes 188                               +0.00021 dB re Subtle copper
+    Curie  MP35N                                    +0.00022 dB re Subtle copper
+    Curie  Waspaloy                                 +0.00025 dB re Subtle copper
+    Curie  Inconel 718                              +0.00025 dB re Subtle copper
+    Curie  Hastelloy C-276                          +0.00025 dB re Subtle copper
+    Curie  Inconel 625                              +0.00026 dB re Subtle copper
+    Curie  René 41                                 +0.00026 dB re Subtle copper
+  [PASS] Curie programme level worst |Curie metal - Subtle copper| = 0.00026 dB on the exact pink spectrum (limit 0.01)
+    Copper — Grade 1 6N OFC                   20 Hz 0 dBFS: THD Subtle 0.0112 %  Curie 0.0112 %  | contour at f +0.25 dB, at 3f +0.25 dB | harmonics follow the contour within 0.0000 dB
+    Copper — Grade 1 6N OFC                  100 Hz 0 dBFS: THD Subtle 0.0007 %  Curie 0.0007 %  | contour at f +0.25 dB, at 3f +0.25 dB | harmonics follow the contour within 0.0000 dB
+    Inconel 718                                 20 Hz 0 dBFS: THD Subtle 0.6716 %  Curie 0.8831 %  | contour at f -2.38 dB, at 3f -0.02 dB | harmonics follow the contour within 0.0161 dB
+    Inconel 718                                100 Hz 0 dBFS: THD Subtle 0.0424 %  Curie 0.0430 %  | contour at f +0.23 dB, at 3f +0.37 dB | harmonics follow the contour within 0.0000 dB
+    René 41                                    20 Hz 0 dBFS: THD Subtle 0.6935 %  Curie 0.9244 %  | contour at f -2.52 dB, at 3f -0.04 dB | harmonics follow the contour within 0.0161 dB
+    René 41                                   100 Hz 0 dBFS: THD Subtle 0.0437 %  Curie 0.0444 %  | contour at f +0.23 dB, at 3f +0.37 dB | harmonics follow the contour within 0.0000 dB
+  [PASS] Curie adds no distortion every harmonic H1-H5 changes by exactly the contour's gain at its frequency: worst 0.0161 dB (limit 0.05)
+  [PASS] Curie: digital silence in -> exact zero out 
+  [PASS] Curie: zero latency, no ringing 44.1 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 2.58e-25 (limit 1e-3, or alternating energy 3.1e-32 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 44.1 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 1.53e-13 (limit 1e-3, or alternating energy 4.7e-18 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 44.1 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 8.25e-13 (limit 1e-3, or alternating energy 6.3e-17 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 44.1 kHz René 41: peak at sample 0, tail alternating/smooth energy 8.48e-12 (limit 1e-3, or alternating energy 1.2e-14 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 352.8 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 6.29e-29 (limit 1e-3, or alternating energy 1.3e-37 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 352.8 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 7.10e-08 (limit 1e-3, or alternating energy 1.5e-13 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 352.8 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 8.46e-10 (limit 1e-3, or alternating energy 6.9e-15 < 1e-24)
+  [PASS] Curie: zero latency, no ringing 352.8 kHz René 41: peak at sample 0, tail alternating/smooth energy 9.62e-16 (limit 1e-3, or alternating energy 2.4e-19 < 1e-24)
+
+  Geiger: core factor 27.6 (Lm / 27.6), foil 2.4 mm x 7.52 layers, 6 HF sections, cap +/-12 dB
+  metal                                            fit 44.1k  fit 352.8k     20 Hz     1 kHz     5 kHz    20 kHz   gain dB
+  Superconductor (NbTi, 0 Ω reference)             0.00e+00    0.00e+00    +0.000    +0.000    +0.000    +0.000   +0.0000
+  Silver — Ohno Continuous Cast 7N                3.85e-04    6.27e-05    +0.905    +0.499    -1.885    -3.970   +1.4589
+  Copper — Grade 1 6N OFC                         3.65e-04    1.53e-04    +0.916    +0.521    -1.947    -4.086   +1.4706
+  Gold — pure                                     2.71e-04    9.23e-05    +0.958    +0.621    -2.214    -4.734   +1.5205
+  Rhodium                                           1.30e-04    2.48e-05    +0.968    +0.781    -2.428    -6.774   +1.5828
+  Iridium                                           1.17e-04    1.87e-05    +0.952    +0.800    -2.406    -7.224   +1.5871
+  Platinum-Iridium 10 (kilogram-prototype alloy)    9.60e-05    9.45e-06    -0.775    +1.016    -1.580   -10.157   +1.6813
+  Monel 400                                         9.39e-05    1.02e-06    -4.018    +1.299    -0.979    -9.554   +1.9112
+  Haynes 188                                        9.09e-05    5.93e-07    -8.521    +1.656    -0.281    -8.480   +2.2095
+  MP35N                                             9.08e-05    6.01e-07    -8.681    +1.668    -0.257    -8.439   +2.2193
+  Waspaloy                                          8.93e-05    5.92e-07   -10.129    +1.769    -0.047    -8.075   +2.3040
+  Inconel 718                                       8.92e-05    5.85e-07   -10.274    +1.779    -0.026    -8.038   +2.3121
+  Hastelloy C-276                                   8.90e-05    5.66e-07   -10.418    +1.788    -0.006    -8.001   +2.3201
+  Inconel 625                                       8.88e-05    5.93e-07   -10.631    +1.802    +0.024    -7.947   +2.3319
+  René 41                                          8.88e-05    5.93e-07   -10.631    +1.802    +0.024    -7.947   +2.3319
+  [PASS] Geiger contour realisation worst |realised - design| 20 Hz-20 kHz, 44.1 + 352.8 kHz: 0.00081 dB (limit 0.002)
+  [PASS] Geiger contour physics realised contour vs exact Geiger/Subtle network ratio, 20 Hz-20 kHz: 0.00016 dB (limit 0.002; fitted to the exact network)
+  [PASS] Geiger cap (vs flat) worst |response| 20 Hz-20 kHz, every metal, 44.1 + 352.8 kHz: 10.653 dB (limit 12.0)
+  [PASS] Geiger cap (any two metals) worst difference between any two metals 20 Hz-20 kHz: 11.611 dB at 20 Hz (limit 12.0)
+  [PASS] Geiger intensity difference between metals 11.611 dB = 12.001 x Color's 0.967 dB (owner: 12x, +/-1%)
+  [PASS] Geiger measured response engine vs analytic, 5 metals x 5 frequencies, -40 dBFS: 0.00055 dB (limit 0.005)
+    Geiger Superconductor (NbTi, 0 Ω reference)    +0.00010 dB re Subtle copper
+    Geiger Silver — Ohno Continuous Cast 7N       +0.00008 dB re Subtle copper
+    Geiger Copper — Grade 1 6N OFC                +0.00007 dB re Subtle copper
+    Geiger Gold — pure                            +0.00007 dB re Subtle copper
+    Geiger Rhodium                                  +0.00007 dB re Subtle copper
+    Geiger Iridium                                  +0.00006 dB re Subtle copper
+    Geiger Platinum-Iridium 10 (kilogram-prototype alloy) +0.00007 dB re Subtle copper
+    Geiger Monel 400                                +0.00009 dB re Subtle copper
+    Geiger Haynes 188                               +0.00012 dB re Subtle copper
+    Geiger MP35N                                    +0.00012 dB re Subtle copper
+    Geiger Waspaloy                                 +0.00012 dB re Subtle copper
+    Geiger Inconel 718                              +0.00012 dB re Subtle copper
+    Geiger Hastelloy C-276                          +0.00013 dB re Subtle copper
+    Geiger Inconel 625                              +0.00013 dB re Subtle copper
+    Geiger René 41                                 +0.00013 dB re Subtle copper
+  [PASS] Geiger programme level worst |Geiger metal - Subtle copper| = 0.00013 dB on the exact pink spectrum (limit 0.01)
+    Copper — Grade 1 6N OFC                   20 Hz 0 dBFS: THD Subtle 0.0112 %  Geiger 0.0112 %  | contour at f +0.92 dB, at 3f +0.92 dB | harmonics follow the contour within 0.0002 dB
+    Copper — Grade 1 6N OFC                  100 Hz 0 dBFS: THD Subtle 0.0007 %  Geiger 0.0007 %  | contour at f +0.92 dB, at 3f +0.89 dB | harmonics follow the contour within 0.0000 dB
+    Inconel 718                                 20 Hz 0 dBFS: THD Subtle 0.6716 %  Geiger 1.8319 %  | contour at f -10.21 dB, at 3f -1.64 dB | harmonics follow the contour within 0.0236 dB
+    Inconel 718                                100 Hz 0 dBFS: THD Subtle 0.0424 %  Geiger 0.0496 %  | contour at f +0.31 dB, at 3f +1.68 dB | harmonics follow the contour within 0.0000 dB
+    René 41                                    20 Hz 0 dBFS: THD Subtle 0.6935 %  Geiger 1.9367 %  | contour at f -10.56 dB, at 3f -1.79 dB | harmonics follow the contour within 0.0224 dB
+    René 41                                   100 Hz 0 dBFS: THD Subtle 0.0437 %  Geiger 0.0516 %  | contour at f +0.24 dB, at 3f +1.69 dB | harmonics follow the contour within 0.0000 dB
+  [PASS] Geiger adds no distortion every harmonic H1-H5 changes by exactly the contour's gain at its frequency: worst 0.0236 dB (limit 0.05)
+  [PASS] Geiger: digital silence in -> exact zero out 
+  [PASS] Geiger: zero latency, no ringing 44.1 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 2.58e-25 (limit 1e-3, or alternating energy 3.1e-32 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 44.1 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 1.25e-13 (limit 1e-3, or alternating energy 1.5e-17 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 44.1 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 2.31e-13 (limit 1e-3, or alternating energy 6.9e-17 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 44.1 kHz René 41: peak at sample 0, tail alternating/smooth energy 6.36e-10 (limit 1e-3, or alternating energy 1.8e-12 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 352.8 kHz Superconductor (NbTi, 0 Ω reference): peak at sample 0, tail alternating/smooth energy 6.29e-29 (limit 1e-3, or alternating energy 1.3e-37 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 352.8 kHz Copper — Grade 1 6N OFC: peak at sample 0, tail alternating/smooth energy 1.12e-07 (limit 1e-3, or alternating energy 3.5e-12 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 352.8 kHz Rhodium: peak at sample 0, tail alternating/smooth energy 1.24e-07 (limit 1e-3, or alternating energy 5.3e-12 < 1e-24)
+  [PASS] Geiger: zero latency, no ringing 352.8 kHz René 41: peak at sample 0, tail alternating/smooth energy 2.93e-10 (limit 1e-3, or alternating energy 3.3e-13 < 1e-24)
+
+  [PASS] Subtle -> Color converges exactly Rene 41: after fade -3029.5 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.04488 vs programme max 0.06075 (source 0.06075, destination 0.05908)
+  [PASS] Subtle -> Geiger converges exactly Rene 41: after fade -3029.0 dB / -3039.5 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.03752 vs programme max 0.06075 (source 0.06075, destination 0.03072)
+  [PASS] Color -> Curie converges exactly Rene 41: after fade -3029.4 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.04062 vs programme max 0.05908 (source 0.05908, destination 0.05511)
+  [PASS] Geiger -> Subtle converges exactly Rene 41: after fade -3029.6 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.04128 vs programme max 0.06075 (source 0.03072, destination 0.06075)
+  [PASS] Curie -> Color converges exactly Rene 41: after fade -3029.5 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.04221 vs programme max 0.05908 (source 0.05511, destination 0.05908)
+  [PASS] Subtle -> Curie, changed to Geiger mid-fade Rene 41: after fade -3029.0 dB / -3039.4 dB re signal (limit -120: every contour runs continuously)
+  [PASS]   no click max sample step in switch window 0.03860 vs programme max 0.06075 (source 0.06075, destination 0.03072)
+  [PASS] Metal change in Color (Copper -> Rene 41) 0-250 ms -67.3 dB, 250 ms-3 s -118.4 dB re signal (limit -60 / -90)
+  [PASS]   no click max sample step in switch window 0.04415 vs programme max 0.05908 (source 0.05843, destination 0.05908)
+  [PASS] Metal change in Geiger (Copper -> Rene 41) 0-250 ms -76.7 dB, 250 ms-3 s -175.7 dB re signal (limit -60 / -90)
+  [PASS]   no click max sample step in switch window 0.02415 vs programme max 0.03990 (source 0.03990, destination 0.03072)
 
 M. BYPASS (true bypass: settled output == input bit for bit; engine keeps running; 40 ms crossfade)
   [PASS] Bypass is bit-exact max |output - input| = 0 (must be exactly 0), incl. metal + contour changes while bypassed
@@ -202,10 +329,16 @@ M. BYPASS (true bypass: settled output == input bit for bit; engine keeps runnin
     engaged Color  Superconductor (NbTi, 0 Ω reference)    residual vs input   -75.0 dB
     engaged Color  Copper — Grade 1 6N OFC                residual vs input   -31.9 dB
     engaged Color  René 41                                 residual vs input   -14.8 dB
-  [PASS] Effect is audible when engaged every metal changes the signal when engaged (residual > -120 dB; Color Rene 41 > -30 dB)
+    engaged Curie  Superconductor (NbTi, 0 Ω reference)    residual vs input   -75.0 dB
+    engaged Curie  Copper — Grade 1 6N OFC                residual vs input   -23.7 dB
+    engaged Curie  René 41                                 residual vs input    -9.9 dB
+    engaged Geiger Superconductor (NbTi, 0 Ω reference)    residual vs input   -75.0 dB
+    engaged Geiger Copper — Grade 1 6N OFC                residual vs input   -12.7 dB
+    engaged Geiger René 41                                 residual vs input    -3.5 dB
+  [PASS] Effect is audible when engaged every metal changes the signal when engaged (residual > -120 dB; Color/Curie/Geiger Rene 41 > -30 dB)
 
 K. CPU (single core, this machine)
-  fs 44.1 kHz: 244.1 ns/sample/channel, stereo uses 2.2 % of one core (x2 during a fade)
-  fs 352.8 kHz: 214.8 ns/sample/channel, stereo uses 15.2 % of one core (x2 during a fade)
+  fs 44.1 kHz: 519.0 ns/sample/channel, stereo uses 4.6 % of one core (x2 during a fade)
+  fs 352.8 kHz: 430.4 ns/sample/channel, stereo uses 30.4 % of one core (x2 during a fade)
 
 RESULT: ALL TESTS PASSED (0 failures)

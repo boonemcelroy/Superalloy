@@ -6,7 +6,9 @@
 
       1. The plugin loads and exports Metal, Contour and Bypass, and the host
          recognises Bypass as the plugin's bypass parameter (VST3 kIsBypass).
-      2. Engaged, the plugin changes the signal; Metal and Contour reach the DSP.
+      2. Engaged, the plugin changes the signal; Metal and Contour reach the DSP,
+         and each Contour position (Subtle, Color, Curie, Geiger) is stronger than
+         the one before it.
       3. Bypass On: after the 40 ms crossfade the output equals the input bit
          for bit (float, and double where the host path supports it).
       4. Bypass Off: the output is identical to a second instance that was
@@ -160,7 +162,7 @@ namespace
         for (int start = 0; start < n; start += block)
         {
             const int len = std::min (block, n - start);
-            if (start == t1)        // Metal -> René 41, Contour -> Color (both instances)
+            if (start == t1)        // Metal -> René 41, Contour -> Geiger (both instances)
             {
                 for (auto* p : { metalA, metalR }) p->setValueNotifyingHost (14.0f / 14.0f);
                 for (auto* p : { contA, contR })   p->setValueNotifyingHost (1.0f);
@@ -182,7 +184,7 @@ namespace
         const double rDefault = residualDB (oa, in, (int) (0.5 * fs), t1);
         const double rColor   = residualDB (oa, in, (int) (1.5 * fs), t2);
         check (rDefault > -120.0, "Engaged: Copper / Subtle changes the signal", juce::String (rDefault, 1) + " dB residual vs input");
-        check (rColor > -30.0 && rColor > rDefault + 10.0, "Metal + Contour reach the DSP (René 41 / Color)",
+        check (rColor > -30.0 && rColor > rDefault + 10.0, "Metal + Contour reach the DSP (René 41 / Geiger)",
                juce::String (rColor, 1) + " dB residual vs input; Metal reads \"" + metalA->getCurrentValueAsText()
                + "\", Contour reads \"" + contA->getCurrentValueAsText() + "\"");
 
@@ -197,13 +199,44 @@ namespace
         check (stepFade <= stepRef * 1.05, "No click entering or leaving bypass",
                "max step in fades " + juce::String (stepFade, 5) + " vs programme " + juce::String (stepRef, 5));
 
+        // Each Contour position reaches the DSP and is stronger than the one before (René 41).
+        {
+            auto d = load (fmt, desc, fs, block, dbl);
+            if (d != nullptr)
+            {
+                auto* md = findParam (*d, "Metal");
+                auto* cdp = findParam (*d, "Contour");
+                md->setValueNotifyingHost (1.0f);
+                const int seg = (int) (0.75 * fs) / block * block, meas = (int) (0.25 * fs) / block * block;
+                std::vector<std::vector<double>> od (2, std::vector<double> ((size_t) n));
+                juce::String detail;
+                double prev = -1.0e9;
+                bool ordered = true, named = true;
+                const char* names[] = { "Subtle", "Color", "Curie", "Geiger" };
+                for (int pos = 0; pos < 4; ++pos)
+                {
+                    cdp->setValueNotifyingHost ((float) pos / 3.0f);
+                    const int s0 = pos * seg;
+                    for (int start = s0; start < s0 + seg; start += block)
+                        runBlock<Sample> (*d, in, od, start, block);
+                    const double r = residualDB (od, in, s0 + seg - meas, s0 + seg);
+                    named &= cdp->getCurrentValueAsText() == names[pos];
+                    ordered &= r > prev + 0.5;      // distinct and stronger at every step
+                    prev = r;
+                    detail << cdp->getCurrentValueAsText() << " " << juce::String (r, 1) << " dB" << (pos < 3 ? ", " : "");
+                }
+                check (ordered && named, "Contour: all four positions reach the DSP, each stronger than the last",
+                       juce::String (juce::CharPointer_UTF8 ("René 41 residual vs input: ")) + detail);
+            }
+        }
+
         if (c != nullptr)
         {
             auto* bc = c->getBypassParameter();
             auto* mc = findParam (*c, "Metal");
             auto* cc = findParam (*c, "Contour");
             const bool ok = bc != nullptr && mc != nullptr && cc != nullptr && bc->getValue() >= 0.5f
-                         && mc->getCurrentValueAsText().contains ("41") && cc->getCurrentValueAsText() == "Color";
+                         && mc->getCurrentValueAsText().contains ("41") && cc->getCurrentValueAsText() == "Geiger";
             check (ok, "Saved state recalls Metal, Contour, Bypass",
                    (mc ? mc->getCurrentValueAsText() : juce::String ("?")) + " / " + (cc ? cc->getCurrentValueAsText() : juce::String ("?"))
                    + " / Bypass " + (bc ? juce::String (bc->getValue(), 0) : juce::String ("?")));

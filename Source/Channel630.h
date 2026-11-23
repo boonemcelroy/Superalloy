@@ -3,7 +3,7 @@
     Superalloy — Channel630.h
     One audio channel:
         DC-free drive → transformer pair (selected metal) → skin shelf → makeup
-        → CONTOUR (Subtle: nothing; Color: per-metal linear contour)
+        → CONTOUR (Subtle: nothing; Color / Curie / Geiger: per-metal linear contour)
         → BYPASS  (true bypass: once settled, output == input, bit for bit)
 
     Seamless metal changes. Every metal's two cores are kept magnetised in the
@@ -21,8 +21,11 @@
 #include "SkinShelf.h"
 #include "ColorContour.h"
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <algorithm>
+#include <thread>
+#include <vector>
 
 namespace superalloy
 {
@@ -34,7 +37,7 @@ namespace superalloy
         std::array<double, kNumMetals> makeup {};
         // shadow model: inverse of the constant 2×2 small-signal matrix
         std::array<double, kNumMetals> i11 {}, i12 {}, i22 {}, g1 {};
-        std::array<ColorDesign, kNumMetals> color {};
+        ColorStage::Designs color {};          // [level][metal]: Color, Curie, Geiger
         double h = 0.0, fs = 0.0;
 
         // Magnitude of the Subtle chain for one metal (small signal).
@@ -42,6 +45,14 @@ namespace superalloy
         {
             return std::abs (design::networkTransfer (m, design::warpedHz (hz, fs)))
                  * shelf[(size_t) m].magnitudeAt (hz, fs) * makeup[(size_t) m];
+        }
+
+        // Magnitude at contour position (0 = Subtle, 1 = Color, 2 = Curie, 3 = Geiger), small signal.
+        double positionMagnitude (int position, int m, double hz) const noexcept
+        {
+            if (position <= 0) return subtleMagnitude (m, hz);
+            const auto& c = color[(size_t) (position - 1)][(size_t) m];
+            return subtleMagnitude (m, hz) * c.magnitudeAt (hz, fs) * c.gain;
         }
 
         void prepare (double sampleRate)
@@ -62,8 +73,26 @@ namespace superalloy
                 const double net = std::abs (design::networkTransfer (m, design::warpedHz (1000.0, fs)));
                 makeup[(size_t) m] = 1.0 / (net * shelf[(size_t) m].magnitudeAt (1000.0, fs));
             }
-            for (int m = 0; m < kNumMetals; ++m)
-                color[(size_t) m].design (m, fs, [this, m] (double hz) { return subtleMagnitude (m, hz); });
+            // 45 independent contour designs (3 levels x 15 metals): spread over the
+            // machine's cores so the first load at a new sample rate stays quick.
+            // Each job writes only its own entry; the Subtle data above is read-only.
+            constexpr int kJobs = colorDesign::kNumLevels * kNumMetals;
+            std::atomic<int> next { 0 };
+            auto worker = [this, &next]
+            {
+                for (int j = next++; j < kJobs; j = next++)
+                {
+                    const int L = j / kNumMetals, m = j % kNumMetals;
+                    color[(size_t) L][(size_t) m].design (m, fs, [this, m] (double hz) { return subtleMagnitude (m, hz); },
+                                                          colorDesign::kLevels[(size_t) L]);
+                }
+            };
+            std::vector<std::thread> pool;
+            const int n = std::clamp ((int) std::thread::hardware_concurrency(), 1, kJobs) - 1;
+            try { for (int t = 0; t < n; ++t) pool.emplace_back (worker); }
+            catch (...) {}                                   // no threads available: this thread does the rest
+            worker();
+            for (auto& t : pool) t.join();
         }
     };
 
@@ -73,7 +102,8 @@ namespace superalloy
     public:
         static constexpr double kCrossfadeSeconds = 0.040;
 
-        void prepare (const MetalBank& sharedBank, int metalIndex, bool colorOn = false, bool bypassOn = false) noexcept
+        // contour: 0 = Subtle, 1 = Color, 2 = Curie, 3 = Geiger
+        void prepare (const MetalBank& sharedBank, int metalIndex, int contour = 0, bool bypassOn = false) noexcept
         {
             bank = &sharedBank;
             const double fs = bank->fs;
@@ -95,7 +125,7 @@ namespace superalloy
             hpA1 = (1.0 - K) / (1.0 + K);
             hpX1 = hpY1 = 0.0;
 
-            color.prepare (bank->color, fs, colorOn);
+            color.prepare (bank->color, fs, contour);
 
             bypassLen = std::max (1, (int) std::lround (kCrossfadeSeconds * fs));
             bypassTarget = bypassOn;
@@ -139,9 +169,9 @@ namespace superalloy
             fadePos = 0;
         }
 
-        // CONTOUR: false = Subtle, true = Color. Seamless (40 ms crossfade).
-        void selectColor (bool on) noexcept  { color.setColor (on); }
-        bool isColor() const noexcept        { return color.isColor(); }
+        // CONTOUR: 0 = Subtle, 1 = Color, 2 = Curie, 3 = Geiger. Seamless (40 ms crossfade).
+        void selectContour (int position) noexcept { color.setPosition (position); }
+        int  getContour() const noexcept           { return color.getPosition(); }
 
         // BYPASS: true = output is the untouched input. Seamless (40 ms crossfade).
         void selectBypass (bool on) noexcept
