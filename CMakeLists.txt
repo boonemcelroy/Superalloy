@@ -99,17 +99,19 @@ endif ()
 
 # ---------------------------------------------------------- level derivation
 # Re-derives the Curie and Geiger geometries from Color (prints the derivation).
-option (WAVRELY_BUILD_DESIGN "Build the contour-level derivation tool" OFF)
+option (WAVRELY_BUILD_DESIGN "Build the design tools (contour-level derivation, field study)" OFF)
 if (WAVRELY_BUILD_DESIGN)
     find_package (Threads REQUIRED)
-    add_executable (designLevels tools/designLevels.cpp Source/TransformerEngine.cpp)
-    target_include_directories (designLevels PRIVATE Source)
-    target_link_libraries (designLevels PRIVATE Threads::Threads)
-    if (MSVC)
-        target_compile_options (designLevels PRIVATE /O2 /fp:precise /utf-8)
-    else ()
-        target_compile_options (designLevels PRIVATE -O3 -fno-fast-math -ffp-contract=off)
-    endif ()
+    foreach (tool designLevels fieldStudy)
+        add_executable (${tool} tools/${tool}.cpp Source/TransformerEngine.cpp)
+        target_include_directories (${tool} PRIVATE Source tools)
+        target_link_libraries (${tool} PRIVATE Threads::Threads)
+        if (MSVC)
+            target_compile_options (${tool} PRIVATE /O2 /fp:precise /utf-8)
+        else ()
+            target_compile_options (${tool} PRIVATE -O3 -fno-fast-math -ffp-contract=off)
+        endif ()
+    endforeach ()
 endif ()
 
 # ------------------------------------------------------------- GUI snapshot

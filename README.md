@@ -34,7 +34,7 @@ build\hostcheckSuperalloy_artefacts\Release\hostcheckSuperalloy.exe build\Supera
 * `verifySuperalloy` must print `RESULT: ALL TESTS PASSED`. Run it after every change to `Source/`.
 * The tools switch the Windows console to UTF-8 at start-up, so metal names print correctly (René 41, Copper — Grade 1). The plugin itself is compiled with `/utf-8`, so its GUI is unaffected either way.
 * `hostcheckSuperalloy` must print `RESULT: ALL CHECKS PASSED`. It drives the compiled plugin only through its exported parameters, the way a DAW does.
-* Optional tools: `-DWAVRELY_BUILD_MEASURE=ON` builds `measureSuperalloy` (frequency response) and `analyzeSuperalloy` (THD, IMD, level, step, programme null); both take `--contour=0..3` (`--color` = 1). `tools/plotAnalysis.py` draws the graphs. `-DWAVRELY_BUILD_DESIGN=ON` builds `designLevels`, which re-derives the Curie and Geiger geometries from Color (`reports/designLevels_report.txt`).
+* Optional tools: `-DWAVRELY_BUILD_MEASURE=ON` builds `measureSuperalloy` (frequency response) and `analyzeSuperalloy` (THD, IMD, level, step, programme null); both take `--contour=0..3` (`--color` = 1). `tools/plotAnalysis.py` draws the graphs. `-DWAVRELY_BUILD_DESIGN=ON` builds `designLevels`, which re-derives the Curie and Geiger geometries from Color (`reports/designLevels_report.txt`), and `fieldStudy`, which sweeps drive voltage against core flux and field strength from 0.63 V to 60 kV on the virtual bus (`fieldStudy <out-dir>`).
 
 ## What is in the signal path
 
@@ -234,6 +234,7 @@ At 100 Hz, 0 dBFS: copper 0.0008% · Inconel 718 0.042%. At 1 kHz every metal is
 | `tools/measureSuperalloy.cpp`, `tools/analyzeSuperalloy.cpp`, `tools/plotAnalysis.py` | Analyser suite and graphs (`reports/analysis`, `reports/analysis_color`) |
 | `tools/design.py`, `tools/skinfit.py` | Parasitic, L_m and skin-ladder solvers |
 | `tools/designLevels.cpp` | Derivation of the Curie and Geiger geometries from Color (`-DWAVRELY_BUILD_DESIGN=ON`) |
+| `tools/fieldStudy.cpp` | Drive voltage vs flux density and field strength, 0.63 V – 60 kV, 20 Hz – 20 kHz (`-DWAVRELY_BUILD_DESIGN=ON`) |
 | `tools/hostcheckSuperalloy.cpp` | End-to-end test of the built VST3 in a VST3 host (`-DWAVRELY_BUILD_HOSTCHECK=ON`) |
 | `tools/snapshotSuperalloy.cpp` | Off-screen GUI render (`-DWAVRELY_BUILD_SNAPSHOT=ON`) |
 | `.github/workflows/macos.yml` | macOS universal build and tests |
