@@ -15,9 +15,13 @@
 #               run the same checks on the x86_64 slice.
 #
 #  Triggers
-#    workflow_call      from macos.yml after build + test-intel (same run)
-#    workflow_dispatch  package the artefacts of an earlier run: give its run ID
-#                       (e.g. the run whose zip was delivered)
+#    workflow_call        from macos.yml after build + test-intel (same run)
+#    workflow_dispatch    package the artefacts of an earlier run: give its run
+#                         ID (e.g. the run whose zip was delivered)
+#    repository_dispatch  the same over the REST API:
+#                         POST /repos/{owner}/{repo}/dispatches
+#                         {"event_type":"package-macos",
+#                          "client_payload":{"source_run_id":"<run id>"}}
 # ==============================================================================
 name: macOS installer (.pkg)
 
@@ -35,12 +39,15 @@ on:
         description: "Run ID of a successful 'macOS VST3' run whose Superalloy-macOS-universal artefact to package"
         required: true
         type: string
+  repository_dispatch:
+    types: [ package-macos ]
 
 permissions:
   contents: read
   actions: read
 
 env:
+  SOURCE_RUN: ${{ inputs.source_run_id || github.event.client_payload.source_run_id || '' }}
   PLUGIN: Superalloy
   PKG_ID: com.wavrely.superalloy.vst3
   INSTALLED: /Library/Audio/Plug-Ins/VST3/Superalloy.vst3
@@ -51,36 +58,41 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
+      - name: Source run ID
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]*$ ]] || { echo "source run ID must be numeric"; exit 1; }
+          echo "packaging the build of run ${SOURCE_RUN:-$GITHUB_RUN_ID}"
+
       - uses: actions/checkout@v4
 
       # ---------------------------------------------------- source artefacts
       - name: Download build (this run)
-        if: inputs.source_run_id == ''
+        if: env.SOURCE_RUN == ''
         uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal
           path: src
       - name: Download test tools (this run)
-        if: inputs.source_run_id == ''
+        if: env.SOURCE_RUN == ''
         uses: actions/download-artifact@v4
         with:
           name: verify-binary
           path: verify
-      - name: Download build (run ${{ inputs.source_run_id }})
-        if: inputs.source_run_id != ''
+      - name: Download build (earlier run)
+        if: env.SOURCE_RUN != ''
         uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal
           path: src
-          run-id: ${{ inputs.source_run_id }}
+          run-id: ${{ env.SOURCE_RUN }}
           github-token: ${{ github.token }}
-      - name: Download test tools (run ${{ inputs.source_run_id }})
-        if: inputs.source_run_id != ''
+      - name: Download test tools (earlier run)
+        if: env.SOURCE_RUN != ''
         uses: actions/download-artifact@v4
         with:
           name: verify-binary
           path: verify
-          run-id: ${{ inputs.source_run_id }}
+          run-id: ${{ env.SOURCE_RUN }}
           github-token: ${{ github.token }}
 
       - name: Unpack the tested build
@@ -97,8 +109,8 @@ jobs:
           VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$VST3/Contents/Info.plist")"
           {
             echo "Superalloy macOS installer package — build and test report"
-            echo "Source run:        ${{ inputs.source_run_id != '' && inputs.source_run_id || github.run_id }}"
-            echo "Package run:       ${{ github.run_id }}"
+            echo "Source run:        ${SOURCE_RUN:-$GITHUB_RUN_ID}"
+            echo "Package run:       $GITHUB_RUN_ID"
             echo "Source zip SHA-256: $(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
             echo "Bundle binary SHA-256: $(shasum -a 256 "$VST3/Contents/MacOS/${PLUGIN}" | cut -d' ' -f1)"
             echo "Version:           $VERSION"
@@ -220,38 +232,41 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
+      - name: Source run ID
+        run: '[[ "$SOURCE_RUN" =~ ^[0-9]*$ ]] || { echo "source run ID must be numeric"; exit 1; }'
+
       - uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal-pkg
           path: pkg
 
       - name: Download build (this run)
-        if: inputs.source_run_id == ''
+        if: env.SOURCE_RUN == ''
         uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal
           path: src
       - name: Download test tools (this run)
-        if: inputs.source_run_id == ''
+        if: env.SOURCE_RUN == ''
         uses: actions/download-artifact@v4
         with:
           name: verify-binary
           path: verify
-      - name: Download build (run ${{ inputs.source_run_id }})
-        if: inputs.source_run_id != ''
+      - name: Download build (earlier run)
+        if: env.SOURCE_RUN != ''
         uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal
           path: src
-          run-id: ${{ inputs.source_run_id }}
+          run-id: ${{ env.SOURCE_RUN }}
           github-token: ${{ github.token }}
-      - name: Download test tools (run ${{ inputs.source_run_id }})
-        if: inputs.source_run_id != ''
+      - name: Download test tools (earlier run)
+        if: env.SOURCE_RUN != ''
         uses: actions/download-artifact@v4
         with:
           name: verify-binary
           path: verify
-          run-id: ${{ inputs.source_run_id }}
+          run-id: ${{ env.SOURCE_RUN }}
           github-token: ${{ github.token }}
 
       - name: Unpack
