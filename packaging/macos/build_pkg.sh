@@ -84,15 +84,23 @@ cmp -s "$WORK/src.sha" "$WORK/stage.sha" || fail "staged bundle differs from the
 # ------------------------------------------------------------------ component
 COMPONENT_PLIST="$WORK/component.plist"
 pkgbuild --analyze --root "$ROOT" "$COMPONENT_PLIST" > /dev/null
-"$PLIST_BUDDY" -c "Print :0:RootRelativeBundlePath" "$COMPONENT_PLIST" | grep -qx "Superalloy.vst3" \
-    || fail "component plist does not describe Superalloy.vst3"
+REL_PATH="$("$PLIST_BUDDY" -c "Print :0:RootRelativeBundlePath" "$COMPONENT_PLIST")"
+[ "$REL_PATH" = "Superalloy.vst3" ] || fail "component plist describes '$REL_PATH', not Superalloy.vst3"
 if "$PLIST_BUDDY" -c "Print :1" "$COMPONENT_PLIST" > /dev/null 2>&1; then
     fail "component plist lists more than one bundle"
 fi
-"$PLIST_BUDDY" -c "Set :0:BundleIsRelocatable false"        "$COMPONENT_PLIST"
-"$PLIST_BUDDY" -c "Set :0:BundleIsVersionChecked false"     "$COMPONENT_PLIST"
-"$PLIST_BUDDY" -c "Set :0:BundleHasStrictIdentifier true"   "$COMPONENT_PLIST"
-"$PLIST_BUDDY" -c "Set :0:BundleOverwriteAction upgrade"    "$COMPONENT_PLIST"
+
+# pkgbuild --analyze does not write every key on every macOS release, so each
+# one is removed if present and written explicitly.
+put() { # put <key> <type> <value>
+    "$PLIST_BUDDY" -c "Delete :0:$1" "$COMPONENT_PLIST" > /dev/null 2>&1 || true
+    "$PLIST_BUDDY" -c "Add :0:$1 $2 $3" "$COMPONENT_PLIST"
+}
+put BundleIsRelocatable       bool   false
+put BundleIsVersionChecked    bool   false
+put BundleHasStrictIdentifier bool   true
+put BundleOverwriteAction     string upgrade
+echo "Component: $(plutil -convert json -o - "$COMPONENT_PLIST")"
 
 pkgbuild \
     --root "$ROOT" \

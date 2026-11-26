@@ -46,6 +46,10 @@ permissions:
   contents: read
   actions: read
 
+defaults:
+  run:
+    shell: bash    # bash --noprofile --norc -eo pipefail: a failure inside "| tee" fails the step
+
 env:
   SOURCE_RUN: ${{ inputs.source_run_id || github.event.client_payload.source_run_id || '' }}
   PLUGIN: Superalloy
@@ -201,7 +205,8 @@ jobs:
           xattr -p com.apple.quarantine "$Q"
           sudo installer -pkg "$Q" -target /
           codesign --verify --deep --strict "$INSTALLED"
-          if xattr -r "$INSTALLED" | grep -q com.apple.quarantine; then QSTATE="present"; else QSTATE="none"; fi
+          QX="$(xattr -r "$INSTALLED" 2>&1 || true)"
+          if grep -q com.apple.quarantine <<< "$QX"; then QSTATE="present"; else QSTATE="none"; fi
           {
             echo
             echo "---- reinstall over an existing copy from a quarantined .pkg (command-line installer): PASS"
