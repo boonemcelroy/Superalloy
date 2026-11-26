@@ -1,0 +1,308 @@
+# ==============================================================================
+#  Superalloy — macOS installer package (.pkg)
+#
+#  Wraps the universal Superalloy.vst3 that the "macOS VST3" workflow built and
+#  tested, byte for byte, in an Installer package (packaging/macos/build_pkg.sh),
+#  then installs that package on real hardware and tests what was installed:
+#
+#  pkg          macos-15 (Apple Silicon): build the .pkg, inspect its structure
+#               (install location, non-relocatable, installer pages), install
+#               it with the macOS installer, check the installed bundle is
+#               byte-identical to the tested build, signature, both slices,
+#               hostcheckSuperalloy + pluginval strictness 10 on the installed
+#               path, reinstall over itself from a quarantined copy, uninstall.
+#  pkg-intel    macos-15-intel: install the same .pkg on real Intel hardware and
+#               run the same checks on the x86_64 slice.
+#
+#  Triggers
+#    workflow_call      from macos.yml after build + test-intel (same run)
+#    workflow_dispatch  package the artefacts of an earlier run: give its run ID
+#                       (e.g. the run whose zip was delivered)
+# ==============================================================================
+name: macOS installer (.pkg)
+
+on:
+  workflow_call:
+    inputs:
+      source_run_id:
+        description: "Run whose build artefacts to package (empty = the calling run)"
+        required: false
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Run ID of a successful 'macOS VST3' run whose Superalloy-macOS-universal artefact to package"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PLUGIN: Superalloy
+  PKG_ID: com.wavrely.superalloy.vst3
+  INSTALLED: /Library/Audio/Plug-Ins/VST3/Superalloy.vst3
+  PLUGINVAL_URL: https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+
+jobs:
+  pkg:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------------------------------------------------- source artefacts
+      - name: Download build (this run)
+        if: inputs.source_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+          path: src
+      - name: Download test tools (this run)
+        if: inputs.source_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: verify-binary
+          path: verify
+      - name: Download build (run ${{ inputs.source_run_id }})
+        if: inputs.source_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+          path: src
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download test tools (run ${{ inputs.source_run_id }})
+        if: inputs.source_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: verify-binary
+          path: verify
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Unpack the tested build
+        run: |
+          sw_vers
+          uname -m
+          mkdir -p out reports
+          ZIP=src/Superalloy-macOS-universal.zip
+          test -f "$ZIP"
+          ditto -x -k "$ZIP" src/unzipped
+          VST3="$PWD/src/unzipped/Superalloy-macOS/${PLUGIN}.vst3"
+          test -d "$VST3"
+          chmod +x verify/verifySuperalloy verify/hostcheckSuperalloy
+          VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$VST3/Contents/Info.plist")"
+          {
+            echo "Superalloy macOS installer package — build and test report"
+            echo "Source run:        ${{ inputs.source_run_id != '' && inputs.source_run_id || github.run_id }}"
+            echo "Package run:       ${{ github.run_id }}"
+            echo "Source zip SHA-256: $(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
+            echo "Bundle binary SHA-256: $(shasum -a 256 "$VST3/Contents/MacOS/${PLUGIN}" | cut -d' ' -f1)"
+            echo "Version:           $VERSION"
+          } | tee reports/pkg_report.txt
+          echo "VST3=$VST3" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------- build
+      - name: Build the package
+        run: |
+          PKG="$PWD/out/${PLUGIN}-${VERSION}-macOS-universal.pkg"
+          bash packaging/macos/build_pkg.sh "$VST3" "$PKG" | tee -a reports/pkg_report.txt
+          echo "PKG=$PKG" >> "$GITHUB_ENV"
+
+      - name: Inspect the package
+        run: |
+          EXP="$RUNNER_TEMP/expanded"
+          pkgutil --expand "$PKG" "$EXP"
+          echo "---- contents";                   find "$EXP" | sed "s|$EXP|.|" | LC_ALL=C sort
+          echo "---- Distribution";               cat "$EXP/Distribution"
+          PI="$EXP/Superalloy-vst3.pkg/PackageInfo"
+          echo "---- PackageInfo";                cat "$PI"
+          echo "---- payload";                    pkgutil --payload-files "$PKG"
+          xmllint --noout "$EXP/Distribution"
+          test "$(xmllint --xpath 'string(/pkg-info/@install-location)' "$PI")" = "/Library/Audio/Plug-Ins/VST3"
+          test "$(xmllint --xpath 'string(/pkg-info/@identifier)' "$PI")" = "$PKG_ID"
+          test "$(xmllint --xpath 'string(/pkg-info/@version)' "$PI")" = "$VERSION"
+          test "$(xmllint --xpath 'count(/pkg-info/relocate/bundle)' "$PI")" = "0"
+          test "$(xmllint --xpath 'count(/pkg-info/scripts/*)' "$PI")" = "0"
+          test -f "$EXP/Resources/en.lproj/welcome.html"
+          test -f "$EXP/Resources/en.lproj/conclusion.html"
+          if grep -q "@VERSION@" "$EXP/Resources/en.lproj/welcome.html" "$EXP/Resources/en.lproj/conclusion.html"; then
+            echo "version placeholder left in the installer pages"; exit 1
+          fi
+          {
+            echo
+            echo "---- structure checks: install location, identifier, version, non-relocatable, no scripts, pages: PASS"
+            echo "---- signature of the .pkg (informational):"
+            pkgutil --check-signature "$PKG" || true
+            echo "---- Gatekeeper assessment of the .pkg (informational):"
+            spctl --assess --verbose=2 --type install "$PKG" 2>&1 || true
+          } | tee -a reports/pkg_report.txt
+
+      # ---------------------------------------------------- install + test
+      - name: Install with the macOS installer
+        run: |
+          test ! -e "$INSTALLED"
+          sudo installer -pkg "$PKG" -target / -verboseR
+          test -d "$INSTALLED"
+          pkgutil --pkg-info "$PKG_ID"
+          pkgutil --files "$PKG_ID"
+
+      - name: Installed bundle is the tested build, byte for byte
+        run: |
+          list() { ( cd "$1" && find . | LC_ALL=C sort ); }
+          sums() { ( cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do shasum -a 256 "$f"; done ); }
+          diff <(list "$VST3") <(list "$INSTALLED")
+          diff <(sums "$VST3") <(sums "$INSTALLED")
+          lipo "$INSTALLED/Contents/MacOS/$PLUGIN" -verify_arch arm64 x86_64
+          codesign --verify --deep --strict --verbose=2 "$INSTALLED"
+          stat -f "%Su:%Sg %Sp %N" "$INSTALLED" "$INSTALLED/Contents/MacOS/$PLUGIN"
+          {
+            echo
+            echo "---- Apple Silicon install: $(sw_vers -productVersion), $(uname -m)"
+            echo "installed at $INSTALLED"
+            echo "file list and SHA-256 of every file identical to the tested build: PASS"
+            echo "slices $(lipo -archs "$INSTALLED/Contents/MacOS/$PLUGIN"); signature verifies: PASS"
+          } | tee -a reports/pkg_report.txt
+
+      - name: hostcheckSuperalloy on the installed plug-in (Apple Silicon)
+        run: |
+          arch -arm64 verify/hostcheckSuperalloy "$INSTALLED" | tee reports/hostcheck_installed_arm64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" reports/hostcheck_installed_arm64.txt
+
+      - name: pluginval strictness 10 on the installed plug-in (Apple Silicon)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/pluginval.zip" "$PLUGINVAL_URL"
+          ditto -x -k "$RUNNER_TEMP/pluginval.zip" "$RUNNER_TEMP/pluginval"
+          arch -arm64 "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" \
+            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee reports/pluginval_installed_arm64.txt
+          grep -q "SUCCESS" reports/pluginval_installed_arm64.txt
+
+      - name: Reinstall over itself from a quarantined (browser-downloaded) copy
+        run: |
+          Q="$RUNNER_TEMP/quarantined.pkg"
+          cp "$PKG" "$Q"
+          xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");Safari;$(uuidgen)" "$Q"
+          xattr -p com.apple.quarantine "$Q"
+          sudo installer -pkg "$Q" -target /
+          codesign --verify --deep --strict "$INSTALLED"
+          if xattr -r "$INSTALLED" | grep -q com.apple.quarantine; then QSTATE="present"; else QSTATE="none"; fi
+          {
+            echo
+            echo "---- reinstall over an existing copy from a quarantined .pkg (command-line installer): PASS"
+            echo "quarantine flag on installed files: $QSTATE"
+          } | tee -a reports/pkg_report.txt
+
+      - name: Uninstall
+        run: |
+          sudo rm -rf "$INSTALLED"
+          sudo pkgutil --forget "$PKG_ID"
+          test ! -e "$INSTALLED"
+          if pkgutil --pkg-info "$PKG_ID" > /dev/null 2>&1; then echo "receipt still present"; exit 1; fi
+          echo "---- uninstall (delete bundle, forget receipt): PASS" | tee -a reports/pkg_report.txt
+
+      - name: Checksum
+        run: |
+          ( cd out && shasum -a 256 "$(basename "$PKG")" ) | tee out/SHA256.txt
+          cp reports/*.txt out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Superalloy-macOS-universal-pkg
+          path: out/
+          if-no-files-found: error
+
+  pkg-intel:
+    needs: pkg
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal-pkg
+          path: pkg
+
+      - name: Download build (this run)
+        if: inputs.source_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+          path: src
+      - name: Download test tools (this run)
+        if: inputs.source_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: verify-binary
+          path: verify
+      - name: Download build (run ${{ inputs.source_run_id }})
+        if: inputs.source_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal
+          path: src
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download test tools (run ${{ inputs.source_run_id }})
+        if: inputs.source_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: verify-binary
+          path: verify
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Unpack
+        run: |
+          sw_vers
+          uname -m
+          ditto -x -k src/Superalloy-macOS-universal.zip src/unzipped
+          echo "VST3=$PWD/src/unzipped/Superalloy-macOS/${PLUGIN}.vst3" >> "$GITHUB_ENV"
+          PKG="$(ls "$PWD"/pkg/*.pkg)"
+          test -f "$PKG"
+          ( cd pkg && shasum -a 256 -c SHA256.txt )
+          echo "PKG=$PKG" >> "$GITHUB_ENV"
+          chmod +x verify/hostcheckSuperalloy
+          mkdir -p reports
+
+      - name: Install with the macOS installer (Intel)
+        run: |
+          test ! -e "$INSTALLED"
+          sudo installer -pkg "$PKG" -target / -verboseR
+          pkgutil --pkg-info "$PKG_ID"
+
+      - name: Installed bundle is the tested build, byte for byte (Intel)
+        run: |
+          list() { ( cd "$1" && find . | LC_ALL=C sort ); }
+          sums() { ( cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do shasum -a 256 "$f"; done ); }
+          diff <(list "$VST3") <(list "$INSTALLED")
+          diff <(sums "$VST3") <(sums "$INSTALLED")
+          lipo "$INSTALLED/Contents/MacOS/$PLUGIN" -verify_arch arm64 x86_64
+          codesign --verify --deep --strict --verbose=2 "$INSTALLED"
+          {
+            echo "---- Intel install: $(sw_vers -productVersion), $(uname -m)"
+            echo "installed at $INSTALLED"
+            echo "file list and SHA-256 of every file identical to the tested build: PASS"
+            echo "slices $(lipo -archs "$INSTALLED/Contents/MacOS/$PLUGIN"); signature verifies: PASS"
+          } | tee reports/pkg_report_intel.txt
+
+      - name: hostcheckSuperalloy on the installed plug-in (Intel, x86_64)
+        run: |
+          arch -x86_64 verify/hostcheckSuperalloy "$INSTALLED" | tee reports/hostcheck_installed_x86_64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" reports/hostcheck_installed_x86_64.txt
+
+      - name: pluginval strictness 10 on the installed plug-in (Intel)
+        run: |
+          curl -fsSL -o pluginval.zip "$PLUGINVAL_URL"
+          ditto -x -k pluginval.zip pluginval
+          arch -x86_64 pluginval/pluginval.app/Contents/MacOS/pluginval \
+            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee reports/pluginval_installed_x86_64.txt
+          grep -q "SUCCESS" reports/pluginval_installed_x86_64.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-intel-reports
+          path: reports/
+          if-no-files-found: error

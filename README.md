@@ -30,7 +30,7 @@ build\hostcheckSuperalloy_artefacts\Release\hostcheckSuperalloy.exe build\Supera
 * The generator `Visual Studio 18 2026` needs CMake 4.2 or newer.
 * `-DWAVRELY_JUCE_DIR` points at your local JUCE 9.0.6 checkout. Leave it out and JUCE 9.0.6 is fetched automatically.
 * AAX: add `-DWAVRELY_AAX_SDK=C:/SDKs/aax-sdk`. You then need PACE signing (wraptool) before Pro Tools will load it.
-* macOS: built and tested on GitHub Actions (`.github/workflows/macos.yml`): one universal VST3 (Intel + Apple Silicon, macOS 11+), tested on both architectures.
+* macOS: built and tested on GitHub Actions (`.github/workflows/macos.yml`): one universal VST3 (Intel + Apple Silicon, macOS 11+), tested on both architectures. Delivered as a zip and as an Installer package (`Superalloy-<version>-macOS-universal.pkg`, built by `packaging/macos/build_pkg.sh`), which installs the same tested bundle, byte for byte, to `/Library/Audio/Plug-Ins/VST3/Superalloy.vst3`. To package the build of an earlier run, run the *macOS installer (.pkg)* workflow by hand with that run's ID.
 * `verifySuperalloy` must print `RESULT: ALL TESTS PASSED`. Run it after every change to `Source/`.
 * The tools switch the Windows console to UTF-8 at start-up, so metal names print correctly (René 41, Copper — Grade 1). The plugin itself is compiled with `/utf-8`, so its GUI is unaffected either way.
 * `hostcheckSuperalloy` must print `RESULT: ALL CHECKS PASSED`. It drives the compiled plugin only through its exported parameters, the way a DAW does.
@@ -141,7 +141,7 @@ The composite targets a 15 MHz bandwidth (Jensen class), with 93 µH leakage and
 * **Regression:** Subtle and Color are bit-identical to rev 6.3.1. 0 of 4.76 million samples differ (metal switches, bypass, every settled sample, 44.1 and 352.8 kHz). Inside the 40 ms Subtle ↔ Color crossfade only, the new four-way blend rounds differently by at most 5.6e-17.
 * **pluginval:** strictness 10 at 44.1 / 48 / 96 / 192 / 352.8 kHz, block sizes 1 / 64 / 512 / 4096. Result: SUCCESS.
 * **Steinberg VST3 validator:** 47 passed, 0 failed.
-* **macOS:** GitHub Actions builds the universal VST3 and runs verifySuperalloy, hostcheckSuperalloy and pluginval on Apple Silicon and on Intel hardware.
+* **macOS:** GitHub Actions builds the universal VST3 and runs verifySuperalloy, hostcheckSuperalloy and pluginval on Apple Silicon and on Intel hardware. The .pkg is then installed with the macOS installer on both architectures; the installed bundle is checked byte for byte against the tested build, and hostcheckSuperalloy and pluginval run again on the installed plug-in.
 
 | Check | Result | Limit |
 |---|---|---|
@@ -238,6 +238,8 @@ At 100 Hz, 0 dBFS: copper 0.0008% · Inconel 718 0.042%. At 1 kHz every metal is
 | `tools/hostcheckSuperalloy.cpp` | End-to-end test of the built VST3 in a VST3 host (`-DWAVRELY_BUILD_HOSTCHECK=ON`) |
 | `tools/snapshotSuperalloy.cpp` | Off-screen GUI render (`-DWAVRELY_BUILD_SNAPSHOT=ON`) |
 | `.github/workflows/macos.yml` | macOS universal build and tests |
+| `.github/workflows/macos-pkg.yml` | macOS Installer package: build, install and re-test on Apple Silicon and Intel |
+| `packaging/macos/build_pkg.sh` | Builds the .pkg (non-relocatable, `/Library/Audio/Plug-Ins/VST3`, macOS 11+, no install scripts); installer pages in `packaging/macos/resources/` |
 
 ## Sources
 

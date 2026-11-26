@@ -10,7 +10,10 @@
 #  test-intel   macos-15-intel: runs verifySuperalloy, hostcheckSuperalloy and
 #               pluginval on the x86_64 slice of the exact same binary, on real
 #               Intel hardware.
-#  release      on a tag v*: publishes the zip as a GitHub Release.
+#  package      macos-pkg.yml: wraps the same tested VST3 in an Installer
+#               package (.pkg), installs it on Apple Silicon and Intel and
+#               re-runs hostcheck + pluginval on the installed plug-in.
+#  release      on a tag v*: publishes the zip and the .pkg as a GitHub Release.
 #
 #  Optional secrets (all six needed for Developer ID signing + notarisation):
 #    MACOS_CERT_P12_BASE64   base64 of your "Developer ID Application" .p12
@@ -31,6 +34,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   PLUGIN: Superalloy
@@ -215,18 +219,26 @@ jobs:
             hostcheckSuperalloy_macos_x86_64.txt
             pluginval_macos_x86_64.txt
 
+  package:
+    needs: [ build, test-intel ]
+    uses: ./.github/workflows/macos-pkg.yml
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ build, test-intel ]
+    needs: [ build, test-intel, package ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: Superalloy-macOS-universal
+      - uses: actions/download-artifact@v4
+        with:
+          name: Superalloy-macOS-universal-pkg
+          path: pkg
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" Superalloy-macOS-universal.zip \
+          gh release create "$GITHUB_REF_NAME" Superalloy-macOS-universal.zip pkg/*.pkg \
             --repo "$GITHUB_REPOSITORY" --title "Superalloy $GITHUB_REF_NAME" \
-            --notes "Universal VST3 for macOS 11+ (Intel and Apple Silicon). Tested on both architectures with verifySuperalloy, hostcheckSuperalloy and pluginval strictness 10."
+            --notes "Universal VST3 for macOS 11+ (Intel and Apple Silicon), as a zip and as an Installer package (.pkg). Tested on both architectures with verifySuperalloy, hostcheckSuperalloy and pluginval strictness 10; the .pkg is installed and re-tested on both."
