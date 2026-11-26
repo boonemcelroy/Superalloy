@@ -103,7 +103,7 @@ jobs:
         run: |
           sw_vers
           uname -m
-          mkdir -p out reports
+          mkdir -p out pkg-reports
           ZIP=src/Superalloy-macOS-universal.zip
           test -f "$ZIP"
           ditto -x -k "$ZIP" src/unzipped
@@ -118,7 +118,7 @@ jobs:
             echo "Source zip SHA-256: $(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
             echo "Bundle binary SHA-256: $(shasum -a 256 "$VST3/Contents/MacOS/${PLUGIN}" | cut -d' ' -f1)"
             echo "Version:           $VERSION"
-          } | tee reports/pkg_report.txt
+          } | tee pkg-reports/pkg_report.txt
           echo "VST3=$VST3" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
@@ -126,7 +126,7 @@ jobs:
       - name: Build the package
         run: |
           PKG="$PWD/out/${PLUGIN}-${VERSION}-macOS-universal.pkg"
-          bash packaging/macos/build_pkg.sh "$VST3" "$PKG" | tee -a reports/pkg_report.txt
+          bash packaging/macos/build_pkg.sh "$VST3" "$PKG" | tee -a pkg-reports/pkg_report.txt
           echo "PKG=$PKG" >> "$GITHUB_ENV"
 
       - name: Inspect the package
@@ -156,7 +156,7 @@ jobs:
             pkgutil --check-signature "$PKG" || true
             echo "---- Gatekeeper assessment of the .pkg (informational):"
             spctl --assess --verbose=2 --type install "$PKG" 2>&1 || true
-          } | tee -a reports/pkg_report.txt
+          } | tee -a pkg-reports/pkg_report.txt
 
       # ---------------------------------------------------- install + test
       - name: Install with the macOS installer
@@ -182,20 +182,20 @@ jobs:
             echo "installed at $INSTALLED"
             echo "file list and SHA-256 of every file identical to the tested build: PASS"
             echo "slices $(lipo -archs "$INSTALLED/Contents/MacOS/$PLUGIN"); signature verifies: PASS"
-          } | tee -a reports/pkg_report.txt
+          } | tee -a pkg-reports/pkg_report.txt
 
       - name: hostcheckSuperalloy on the installed plug-in (Apple Silicon)
         run: |
-          arch -arm64 verify/hostcheckSuperalloy "$INSTALLED" | tee reports/hostcheck_installed_arm64.txt
-          grep -q "RESULT: ALL CHECKS PASSED" reports/hostcheck_installed_arm64.txt
+          arch -arm64 verify/hostcheckSuperalloy "$INSTALLED" | tee pkg-reports/hostcheck_installed_arm64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" pkg-reports/hostcheck_installed_arm64.txt
 
       - name: pluginval strictness 10 on the installed plug-in (Apple Silicon)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/pluginval.zip" "$PLUGINVAL_URL"
           ditto -x -k "$RUNNER_TEMP/pluginval.zip" "$RUNNER_TEMP/pluginval"
           arch -arm64 "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" \
-            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee reports/pluginval_installed_arm64.txt
-          grep -q "SUCCESS" reports/pluginval_installed_arm64.txt
+            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee pkg-reports/pluginval_installed_arm64.txt
+          grep -q "SUCCESS" pkg-reports/pluginval_installed_arm64.txt
 
       - name: Reinstall over itself from a quarantined (browser-downloaded) copy
         run: |
@@ -211,7 +211,7 @@ jobs:
             echo
             echo "---- reinstall over an existing copy from a quarantined .pkg (command-line installer): PASS"
             echo "quarantine flag on installed files: $QSTATE"
-          } | tee -a reports/pkg_report.txt
+          } | tee -a pkg-reports/pkg_report.txt
 
       - name: Uninstall
         run: |
@@ -219,12 +219,12 @@ jobs:
           sudo pkgutil --forget "$PKG_ID"
           test ! -e "$INSTALLED"
           if pkgutil --pkg-info "$PKG_ID" > /dev/null 2>&1; then echo "receipt still present"; exit 1; fi
-          echo "---- uninstall (delete bundle, forget receipt): PASS" | tee -a reports/pkg_report.txt
+          echo "---- uninstall (delete bundle, forget receipt): PASS" | tee -a pkg-reports/pkg_report.txt
 
       - name: Checksum
         run: |
           ( cd out && shasum -a 256 "$(basename "$PKG")" ) | tee out/SHA256.txt
-          cp reports/*.txt out/
+          cp pkg-reports/*.txt out/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -285,7 +285,7 @@ jobs:
           ( cd pkg && shasum -a 256 -c SHA256.txt )
           echo "PKG=$PKG" >> "$GITHUB_ENV"
           chmod +x verify/hostcheckSuperalloy
-          mkdir -p reports
+          mkdir -p pkg-reports
 
       - name: Install with the macOS installer (Intel)
         run: |
@@ -306,23 +306,23 @@ jobs:
             echo "installed at $INSTALLED"
             echo "file list and SHA-256 of every file identical to the tested build: PASS"
             echo "slices $(lipo -archs "$INSTALLED/Contents/MacOS/$PLUGIN"); signature verifies: PASS"
-          } | tee reports/pkg_report_intel.txt
+          } | tee pkg-reports/pkg_report_intel.txt
 
       - name: hostcheckSuperalloy on the installed plug-in (Intel, x86_64)
         run: |
-          arch -x86_64 verify/hostcheckSuperalloy "$INSTALLED" | tee reports/hostcheck_installed_x86_64.txt
-          grep -q "RESULT: ALL CHECKS PASSED" reports/hostcheck_installed_x86_64.txt
+          arch -x86_64 verify/hostcheckSuperalloy "$INSTALLED" | tee pkg-reports/hostcheck_installed_x86_64.txt
+          grep -q "RESULT: ALL CHECKS PASSED" pkg-reports/hostcheck_installed_x86_64.txt
 
       - name: pluginval strictness 10 on the installed plug-in (Intel)
         run: |
           curl -fsSL -o pluginval.zip "$PLUGINVAL_URL"
           ditto -x -k pluginval.zip pluginval
           arch -x86_64 pluginval/pluginval.app/Contents/MacOS/pluginval \
-            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee reports/pluginval_installed_x86_64.txt
-          grep -q "SUCCESS" reports/pluginval_installed_x86_64.txt
+            --strictness-level 10 --validate-in-process --validate "$INSTALLED" | tee pkg-reports/pluginval_installed_x86_64.txt
+          grep -q "SUCCESS" pkg-reports/pluginval_installed_x86_64.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: pkg-intel-reports
-          path: reports/
+          path: pkg-reports/
           if-no-files-found: error
